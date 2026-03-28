@@ -31,7 +31,13 @@ var voicesListCmd = &cobra.Command{
 		emotion, _ := flags.GetString("emotion")
 		asJSON, _ := flags.GetBool("json")
 
-		c := client.New(viper.GetString("api_key"))
+		baseURL := viper.GetString("base_url")
+		var c *client.Client
+		if baseURL != "" {
+			c = client.NewWithBaseURL(viper.GetString("api_key"), baseURL)
+		} else {
+			c = client.New(viper.GetString("api_key"))
+		}
 		voices, err := c.ListVoices(client.ListVoicesParams{
 			Model:   model,
 			Gender:  gender,
@@ -111,7 +117,13 @@ var voicesGetCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		asJSON, _ := cmd.Flags().GetBool("json")
 
-		c := client.New(viper.GetString("api_key"))
+		baseURL := viper.GetString("base_url")
+		var c *client.Client
+		if baseURL != "" {
+			c = client.NewWithBaseURL(viper.GetString("api_key"), baseURL)
+		} else {
+			c = client.New(viper.GetString("api_key"))
+		}
 		voice, err := c.GetVoice(args[0])
 		if err != nil {
 			return err

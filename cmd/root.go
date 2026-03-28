@@ -57,7 +57,13 @@ var rootCmd = &cobra.Command{
 
 		format := viper.GetString("format")
 
-		c := client.New(viper.GetString("api_key"))
+		baseURL := viper.GetString("base_url")
+		var c *client.Client
+		if baseURL != "" {
+			c = client.NewWithBaseURL(viper.GetString("api_key"), baseURL)
+		} else {
+			c = client.New(viper.GetString("api_key"))
+		}
 
 		audio, err := c.TextToSpeech(req)
 		if err != nil {
@@ -148,9 +154,7 @@ func buildTTSRequest(cmd *cobra.Command, text string) (client.TTSRequest, error)
 			prompt.PreviousText = prevText
 			prompt.NextText = nextText
 		case "preset":
-			if model == "ssfm-v30" {
-				prompt.EmotionType = "preset"
-			}
+			prompt.EmotionType = "preset"
 			prompt.EmotionPreset = emotionPreset
 			if emotionIntensity >= 0 {
 				prompt.EmotionIntensity = &emotionIntensity
@@ -201,6 +205,8 @@ func init() {
 
 	rootCmd.PersistentFlags().String("api-key", "", "API key (or TYPECAST_API_KEY)")
 	viper.BindPFlag("api_key", rootCmd.PersistentFlags().Lookup("api-key"))
+	rootCmd.PersistentFlags().String("base-url", "", "API base URL (or TYPECAST_BASE_URL, default: https://api.typecast.ai)")
+	viper.BindPFlag("base_url", rootCmd.PersistentFlags().Lookup("base-url"))
 
 	f := rootCmd.Flags()
 	f.String("voice-id", "", "Voice ID (or TYPECAST_VOICE_ID)")
