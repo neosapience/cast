@@ -146,6 +146,13 @@ In the picker, type to filter, press Enter to select a voice, then:
 - **Esc** — Go back
 
 ```bash
+# Pick a random voice (great for experimentation)
+cast voices random
+cast voices random --gender female --age young_adult
+cast "Hello!" --voice-id $(cast voices random --model ssfm-v30 --gender female)
+```
+
+```bash
 # List voices (table output by default)
 cast voices list
 cast voices list --gender female

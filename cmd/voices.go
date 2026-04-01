@@ -163,5 +163,6 @@ func init() {
 	voicesCmd.AddCommand(voicesListCmd)
 	voicesCmd.AddCommand(voicesGetCmd)
 	voicesCmd.AddCommand(pickCmd)
+	voicesCmd.AddCommand(randomCmd)
 	rootCmd.AddCommand(voicesCmd)
 }
