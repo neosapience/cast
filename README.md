@@ -146,6 +146,20 @@ In the picker, type to filter, press Enter to select a voice, then:
 - **Esc** — Go back
 
 ```bash
+# Voice tournament — head-to-head elimination to find your favorite
+cast voices tournament
+cast voices tournament --gender female --size 16
+cast voices tournament --text "Custom preview sentence"
+
+```
+
+In the tournament, listen to two voices and pick a winner:
+- **P** — Preview voice 1
+- **Q** — Preview voice 2
+- **1** — Pick voice 1
+- **2** — Pick voice 2
+
+```bash
 # Pick a random voice (great for experimentation)
 cast voices random
 cast voices random --gender female --age young_adult
