@@ -35,11 +35,14 @@ cast login
 # 2. Try it immediately with the default voice
 cast "Hello, world!"
 
-# 3. Browse available voices and pick one you like
-cast voices list
+# 3. Interactively browse and pick a voice
+cast voices pick
+cast voices pick --gender female
+
+# Or list voices non-interactively
 cast voices list --gender female --use-case Audiobook
 
-# 4. Set your preferred voice as default
+# 4. Set your preferred voice as default (or press S in pick mode)
 cast config set voice-id tc_xxx
 ```
 
@@ -126,6 +129,21 @@ cast "Hello, world!" --model ssfm-v21 --emotion preset --emotion-preset sad
 ```
 
 ### Voices
+
+```bash
+# Interactive voice picker — browse, preview, and select
+cast voices pick
+cast voices pick --gender female --age young_adult
+cast voices pick --text "Custom preview sentence"
+```
+
+In the picker, type to filter, press Enter to select a voice, then:
+- **P** — Preview with current model/emotion preset (cycle with ←/→)
+- **E** — Preview with smart emotion (ssfm-v30 presets only)
+- **S** — Set as default voice
+- **C** — Copy voice ID to clipboard
+- **Enter** — Confirm and print voice ID to stdout
+- **Esc** — Go back
 
 ```bash
 # List voices (table output by default)
