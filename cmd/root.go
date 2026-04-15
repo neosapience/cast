@@ -98,7 +98,7 @@ func buildTTSRequest(cmd *cobra.Command, text string) (client.TTSRequest, error)
 	format := viper.GetString("format")
 	seed := viper.GetInt("seed")
 	targetLUFS := viper.GetFloat64("target_lufs")
-	targetLUFSSet := flags.Changed("target-lufs") || targetLUFS != 0
+	targetLUFSSet := flags.Changed("target-lufs")
 
 	// Validate all params before producing any side effects (e.g. warning messages).
 	if emotion != "" && emotion != "smart" && emotion != "preset" {

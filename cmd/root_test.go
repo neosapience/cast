@@ -359,6 +359,34 @@ func TestRootCmd_TargetLufsFlag(t *testing.T) {
 	}
 }
 
+func TestRootCmd_TargetLufsExplicitZero(t *testing.T) {
+	resetFlags()
+	rootCmd.Flags().Set("target-lufs", "0")
+
+	req, err := buildTTSRequest(rootCmd, "hello")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if req.Output == nil || req.Output.TargetLUFS == nil {
+		t.Fatal("expected target_lufs to be set when explicitly passing 0")
+	}
+	if *req.Output.TargetLUFS != 0.0 {
+		t.Errorf("target_lufs: want 0, got %g", *req.Output.TargetLUFS)
+	}
+}
+
+func TestRootCmd_TargetLufsNotSetByDefault(t *testing.T) {
+	resetFlags()
+
+	req, err := buildTTSRequest(rootCmd, "hello")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if req.Output != nil && req.Output.TargetLUFS != nil {
+		t.Errorf("expected target_lufs to be nil when not explicitly set, got %g", *req.Output.TargetLUFS)
+	}
+}
+
 func TestRootCmd_VolumeAndTargetLufsMutuallyExclusive(t *testing.T) {
 	resetFlags()
 	rootCmd.Flags().Set("volume", "100")
