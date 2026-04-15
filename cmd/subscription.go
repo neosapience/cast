@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/neosapience/cast/internal/client"
 
@@ -39,11 +40,15 @@ var subscriptionCmd = &cobra.Command{
 }
 
 func formatInt(n int64) string {
-	if n < 0 {
-		return "-" + formatInt(-n)
+	negative := n < 0
+	s := strconv.FormatInt(n, 10)
+	if negative {
+		s = s[1:] // strip the minus; we re-add it at the end
 	}
-	s := fmt.Sprintf("%d", n)
 	if len(s) <= 3 {
+		if negative {
+			return "-" + s
+		}
 		return s
 	}
 	var result []byte
@@ -52,6 +57,9 @@ func formatInt(n int64) string {
 			result = append(result, ',')
 		}
 		result = append(result, byte(c))
+	}
+	if negative {
+		return "-" + string(result)
 	}
 	return string(result)
 }
