@@ -38,6 +38,10 @@ func (c *Client) TextToSpeech(req TTSRequest) ([]byte, error) {
 }
 
 func (c *Client) TextToSpeechStream(req TTSRequest, onChunk func([]byte) error) error {
+	if onChunk == nil {
+		return fmt.Errorf("onChunk callback must not be nil")
+	}
+
 	b, err := json.Marshal(req)
 	if err != nil {
 		return err

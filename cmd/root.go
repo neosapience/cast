@@ -75,13 +75,17 @@ var rootCmd = &cobra.Command{
 				if err != nil {
 					return fmt.Errorf("failed to create output file: %w", err)
 				}
-				defer f.Close()
 
-				if err := c.TextToSpeechStream(req, func(chunk []byte) error {
+				streamErr := c.TextToSpeechStream(req, func(chunk []byte) error {
 					_, err := f.Write(chunk)
 					return err
-				}); err != nil {
-					return err
+				})
+				if closeErr := f.Close(); closeErr != nil && streamErr == nil {
+					streamErr = fmt.Errorf("failed to close output file: %w", closeErr)
+				}
+				if streamErr != nil {
+					os.Remove(outFile)
+					return streamErr
 				}
 				fmt.Fprintf(os.Stderr, "saved to %s\n", outFile)
 				return nil

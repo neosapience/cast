@@ -121,6 +121,20 @@ func TestTextToSpeechStream_Success(t *testing.T) {
 	}
 }
 
+func TestTextToSpeechStream_NilCallback(t *testing.T) {
+	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("server should not be called when callback is nil")
+	})
+
+	err := c.TextToSpeechStream(TTSRequest{VoiceID: "v1", Text: "hello"}, nil)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !bytes.Contains([]byte(err.Error()), []byte("onChunk callback must not be nil")) {
+		t.Errorf("expected nil callback error, got: %v", err)
+	}
+}
+
 func TestTextToSpeechStream_Error(t *testing.T) {
 	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
