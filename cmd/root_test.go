@@ -332,8 +332,13 @@ func resetFlags() {
 	f.Set("out", "")
 	f.Set("format", "")
 	f.Set("language", "")
+	if flag := f.Lookup("stream"); flag != nil {
+		flag.Value.Set("false")
+		flag.Changed = false
+	}
 	viper.Set("format", "")
 	viper.Set("language", "")
+	viper.Set("stream", nil)
 }
 
 func TestRootCmd_TextValidation(t *testing.T) {
@@ -397,6 +402,44 @@ func TestRootCmd_AudioParamValidation(t *testing.T) {
 				t.Errorf("want error containing %q, got %q", tc.errMsg, err.Error())
 			}
 		})
+	}
+}
+
+func TestRootCmd_StreamFlagParsing(t *testing.T) {
+	resetFlags()
+	rootCmd.Flags().Set("stream", "true")
+
+	val, err := rootCmd.Flags().GetBool("stream")
+	if err != nil {
+		t.Fatalf("unexpected error getting stream flag: %v", err)
+	}
+	if !val {
+		t.Error("expected stream flag to be true")
+	}
+}
+
+func TestRootCmd_StreamOutFileSaved(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/text-to-speech/stream" {
+			t.Errorf("expected stream path, got %s", r.URL.Path)
+		}
+		w.Write([]byte("streamed-audio-bytes"))
+	}))
+	defer srv.Close()
+
+	outFile := filepath.Join(t.TempDir(), "stream_out.wav")
+	resetFlags()
+	rootCmd.SetArgs([]string{"hello", "--base-url", srv.URL, "--out", outFile, "--stream"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	data, err := os.ReadFile(outFile)
+	if err != nil {
+		t.Fatalf("output file not found: %v", err)
+	}
+	if string(data) != "streamed-audio-bytes" {
+		t.Errorf("file content: want %q, got %q", "streamed-audio-bytes", string(data))
 	}
 }
 
