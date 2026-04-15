@@ -332,8 +332,45 @@ func resetFlags() {
 	f.Set("out", "")
 	f.Set("format", "")
 	f.Set("language", "")
+	if flag := f.Lookup("target-lufs"); flag != nil {
+		flag.Value.Set("0")
+		flag.Changed = false
+	}
 	viper.Set("format", "")
 	viper.Set("language", "")
+}
+
+func TestRootCmd_TargetLufsFlag(t *testing.T) {
+	resetFlags()
+	rootCmd.Flags().Set("target-lufs", "-14")
+
+	req, err := buildTTSRequest(rootCmd, "hello")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if req.Output == nil || req.Output.TargetLUFS == nil {
+		t.Fatal("expected target_lufs to be set")
+	}
+	if *req.Output.TargetLUFS != -14.0 {
+		t.Errorf("target_lufs: want -14, got %g", *req.Output.TargetLUFS)
+	}
+	if req.Output.Volume != nil {
+		t.Errorf("volume should be nil when target_lufs is set, got %v", *req.Output.Volume)
+	}
+}
+
+func TestRootCmd_VolumeAndTargetLufsMutuallyExclusive(t *testing.T) {
+	resetFlags()
+	rootCmd.Flags().Set("volume", "100")
+	rootCmd.Flags().Set("target-lufs", "-14")
+
+	_, err := buildTTSRequest(rootCmd, "hello")
+	if err == nil {
+		t.Fatal("expected error when both --volume and --target-lufs are set")
+	}
+	if !strings.Contains(err.Error(), "cannot use both --volume and --target-lufs") {
+		t.Errorf("unexpected error: %v", err)
+	}
 }
 
 func TestRootCmd_TextValidation(t *testing.T) {

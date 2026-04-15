@@ -12,4 +12,6 @@ const (
 	maxTempo           = 2.0
 	minEmotionIntensity = 0.0
 	maxEmotionIntensity = 2.0
+	minTargetLUFS = -70.0
+	maxTargetLUFS = 0.0
 )

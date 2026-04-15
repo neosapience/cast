@@ -23,6 +23,7 @@ type TTSOutput struct {
 	AudioPitch  *int     `json:"audio_pitch,omitempty"`
 	AudioTempo  *float64 `json:"audio_tempo,omitempty"`
 	AudioFormat string   `json:"audio_format,omitempty"`
+	TargetLUFS  *float64 `json:"target_lufs,omitempty"`
 }
 
 func (c *Client) TextToSpeech(req TTSRequest) ([]byte, error) {
