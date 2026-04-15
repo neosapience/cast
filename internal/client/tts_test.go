@@ -50,6 +50,70 @@ func TestTextToSpeech_ReturnsErrorOnAPIFailure(t *testing.T) {
 	}
 }
 
+func TestTTSRequest_TargetLUFS_SerializesCorrectly(t *testing.T) {
+	lufs := -14.0
+	req := TTSRequest{
+		VoiceID: "v1",
+		Text:    "hello",
+		Model:   "ssfm-v30",
+		Output:  &TTSOutput{TargetLUFS: &lufs},
+	}
+
+	data, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+
+	var m map[string]interface{}
+	json.Unmarshal(data, &m)
+
+	out, ok := m["output"].(map[string]interface{})
+	if !ok {
+		t.Fatal("expected output in JSON")
+	}
+	if _, exists := out["target_lufs"]; !exists {
+		t.Error("expected target_lufs in JSON output")
+	}
+	if val := out["target_lufs"].(float64); val != -14.0 {
+		t.Errorf("target_lufs: want -14, got %g", val)
+	}
+	if _, exists := out["volume"]; exists {
+		t.Error("volume should not be present when target_lufs is set")
+	}
+}
+
+func TestTTSRequest_Volume_NoTargetLUFS(t *testing.T) {
+	vol := 150
+	req := TTSRequest{
+		VoiceID: "v1",
+		Text:    "hello",
+		Model:   "ssfm-v30",
+		Output:  &TTSOutput{Volume: &vol},
+	}
+
+	data, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+
+	var m map[string]interface{}
+	json.Unmarshal(data, &m)
+
+	out, ok := m["output"].(map[string]interface{})
+	if !ok {
+		t.Fatal("expected output in JSON")
+	}
+	if _, exists := out["volume"]; !exists {
+		t.Error("expected volume in JSON output")
+	}
+	if val := out["volume"].(float64); val != 150 {
+		t.Errorf("volume: want 150, got %g", val)
+	}
+	if _, exists := out["target_lufs"]; exists {
+		t.Error("target_lufs should not be present when only volume is set")
+	}
+}
+
 func TestTextToSpeech_SendsOptionalFields(t *testing.T) {
 	seed := 42
 	volume := 150
