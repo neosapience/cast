@@ -49,6 +49,7 @@ For non-whitespace languages (jpn, zho), pass --granularity char or both
 			return fmt.Errorf("--captions-out is required")
 		}
 		if granularity != "" {
+			granularity = strings.ToLower(granularity)
 			switch granularity {
 			case "word", "char", "both":
 			default:
@@ -79,15 +80,7 @@ For non-whitespace languages (jpn, zho), pass --granularity char or both
 			c = client.New(viper.GetString("api_key"))
 		}
 
-		tsReq := client.TTSRequestWithTimestamps{
-			VoiceID:  req.VoiceID,
-			Text:     req.Text,
-			Model:    req.Model,
-			Language: req.Language,
-			Prompt:   req.Prompt,
-			Output:   req.Output,
-			Seed:     req.Seed,
-		}
+		tsReq := client.TTSRequestWithTimestamps(req)
 
 		resp, err := c.TextToSpeechWithTimestamps(tsReq, granularity)
 		if err != nil {
@@ -124,7 +117,10 @@ func readCaptionsText(args []string) (string, error) {
 	if len(args) == 1 {
 		return args[0], nil
 	}
-	stat, _ := os.Stdin.Stat()
+	stat, err := os.Stdin.Stat()
+	if err != nil {
+		return "", fmt.Errorf("failed to stat stdin: %w", err)
+	}
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		data, err := io.ReadAll(os.Stdin)
 		if err != nil {
