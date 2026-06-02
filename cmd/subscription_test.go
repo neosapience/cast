@@ -44,6 +44,12 @@ func TestSubscriptionCmd_JSON(t *testing.T) {
 		if r.URL.Path != "/v1/users/me/subscription" {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
+		if r.Method != http.MethodGet {
+			t.Errorf("unexpected method: %s", r.Method)
+		}
+		if got := r.Header.Get("X-API-KEY"); got != "" {
+			t.Errorf("expected empty test API key header, got %q", got)
+		}
 		w.Write([]byte(`{"plan":"plus","credits":{"plan_credits":1000,"used_credits":250},"limits":{"concurrency_limit":5}}`))
 	}))
 	defer srv.Close()
@@ -67,8 +73,15 @@ func TestSubscriptionCmd_JSON(t *testing.T) {
 	out.ReadFrom(r)
 
 	var got struct {
-		Plan             string `json:"plan"`
-		RemainingCredits int64  `json:"remaining_credits"`
+		Plan    string `json:"plan"`
+		Credits struct {
+			PlanCredits int64 `json:"plan_credits"`
+			UsedCredits int64 `json:"used_credits"`
+		} `json:"credits"`
+		Limits struct {
+			ConcurrencyLimit int `json:"concurrency_limit"`
+		} `json:"limits"`
+		RemainingCredits int64 `json:"remaining_credits"`
 	}
 	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
 		t.Fatalf("invalid JSON output: %v\n%s", err, out.String())
@@ -79,10 +92,22 @@ func TestSubscriptionCmd_JSON(t *testing.T) {
 	if got.RemainingCredits != 750 {
 		t.Errorf("remaining_credits: want 750, got %d", got.RemainingCredits)
 	}
+	if got.Credits.PlanCredits != 1000 || got.Credits.UsedCredits != 250 {
+		t.Errorf("credits: got %+v", got.Credits)
+	}
+	if got.Limits.ConcurrencyLimit != 5 {
+		t.Errorf("concurrency_limit: want 5, got %d", got.Limits.ConcurrencyLimit)
+	}
 }
 
 func TestSubscriptionCmd_HumanReadable(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Errorf("unexpected method: %s", r.Method)
+		}
+		if got := r.Header.Get("X-API-KEY"); got != "" {
+			t.Errorf("expected empty test API key header, got %q", got)
+		}
 		w.Write([]byte(`{"plan":"lite","credits":{"plan_credits":2000,"used_credits":1250},"limits":{"concurrency_limit":3}}`))
 	}))
 	defer srv.Close()
@@ -109,6 +134,12 @@ func TestSubscriptionCmd_HumanReadable(t *testing.T) {
 		t.Errorf("unexpected output: %s", out.String())
 	}
 	if !strings.Contains(out.String(), "Remaining:   750") {
+		t.Errorf("unexpected output: %s", out.String())
+	}
+	if !strings.Contains(out.String(), "Credits:     1,250 / 2,000 used") {
+		t.Errorf("unexpected output: %s", out.String())
+	}
+	if !strings.Contains(out.String(), "Concurrency: 3") {
 		t.Errorf("unexpected output: %s", out.String())
 	}
 }

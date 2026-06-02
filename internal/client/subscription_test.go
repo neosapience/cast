@@ -3,6 +3,7 @@ package client
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -54,5 +55,8 @@ func TestGetMySubscription_Unauthorized(t *testing.T) {
 	_, err := c.GetMySubscription()
 	if err == nil {
 		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "authentication failed") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
