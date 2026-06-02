@@ -74,6 +74,17 @@ func (c *Client) get(path string) ([]byte, error) {
 	return c.do(req)
 }
 
+func (c *Client) delete(path string) ([]byte, error) {
+	req, err := http.NewRequest("DELETE", c.baseURL+path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("X-API-KEY", c.apiKey)
+
+	return c.do(req)
+}
+
 func (c *Client) do(req *http.Request) ([]byte, error) {
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
