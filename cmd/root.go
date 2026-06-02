@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -15,9 +16,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:          "cast [text]",
-	Short:        "Typecast TTS CLI",
-	Args:         cobra.MaximumNArgs(1),
+	Use:           "cast [text]",
+	Short:         "Typecast TTS CLI",
+	Args:          cobra.MaximumNArgs(1),
 	SilenceErrors: true,
 	SilenceUsage:  true,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -56,6 +57,9 @@ var rootCmd = &cobra.Command{
 		}
 
 		format := viper.GetString("format")
+		timestampsOut, _ := cmd.Flags().GetString("timestamps-out")
+		timestampsFormat, _ := cmd.Flags().GetString("timestamps-format")
+		granularity, _ := cmd.Flags().GetString("granularity")
 
 		baseURL := viper.GetString("base_url")
 		var c *client.Client
@@ -63,6 +67,13 @@ var rootCmd = &cobra.Command{
 			c = client.NewWithBaseURL(viper.GetString("api_key"), baseURL)
 		} else {
 			c = client.New(viper.GetString("api_key"))
+		}
+
+		if timestampsFormat != "" && timestampsOut == "" {
+			return fmt.Errorf("--timestamps-format requires --timestamps-out")
+		}
+		if timestampsOut != "" {
+			return runTTSWithTimestamps(c, req, outFile, format, timestampsOut, timestampsFormat, granularity)
 		}
 
 		audio, err := c.TextToSpeech(req)
@@ -75,6 +86,108 @@ var rootCmd = &cobra.Command{
 		}
 		return playAudio(audio, format)
 	},
+}
+
+func runTTSWithTimestamps(c *client.Client, req client.TTSRequest, outFile, audioFormat, timestampsOut, timestampsFormat, granularity string) error {
+	timestampsFormat, err := resolveTimestampsFormat(timestampsOut, timestampsFormat)
+	if err != nil {
+		return err
+	}
+
+	granularity, err = resolveGranularity(req.Language, granularity)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.TextToSpeechWithTimestamps(client.TTSRequestWithTimestamps(req), granularity)
+	if err != nil {
+		return err
+	}
+
+	if err := writeTimestampsOutput(resp, timestampsOut, timestampsFormat); err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stderr, "timestamps saved: %s\n", timestampsOut)
+
+	if outFile != "" {
+		if err := resp.SaveAudio(outFile); err != nil {
+			return fmt.Errorf("failed to save audio: %w", err)
+		}
+		fmt.Fprintf(os.Stderr, "saved to %s\n", outFile)
+		return nil
+	}
+
+	audio, err := resp.AudioBytes()
+	if err != nil {
+		return err
+	}
+	if audioFormat == "" {
+		audioFormat = resp.AudioFormat
+	}
+	return playAudio(audio, audioFormat)
+}
+
+func resolveTimestampsFormat(path, explicit string) (string, error) {
+	format := strings.ToLower(explicit)
+	if format == "" {
+		switch strings.ToLower(filepath.Ext(path)) {
+		case ".srt":
+			format = "srt"
+		case ".vtt":
+			format = "vtt"
+		default:
+			format = "json"
+		}
+	}
+	switch format {
+	case "json", "srt", "vtt":
+		return format, nil
+	default:
+		return "", fmt.Errorf("--timestamps-format must be 'json', 'srt', or 'vtt', got %q", explicit)
+	}
+}
+
+func resolveGranularity(language, granularity string) (string, error) {
+	granularity = strings.ToLower(granularity)
+	if granularity == "" && (language == "jpn" || language == "zho") {
+		fmt.Fprintf(os.Stderr, "language %q has no whitespace, defaulting --granularity char\n", language)
+		return "char", nil
+	}
+	switch granularity {
+	case "", "word", "char", "both":
+		return granularity, nil
+	default:
+		return "", fmt.Errorf("--granularity must be 'word', 'char', or 'both', got %q", granularity)
+	}
+}
+
+func writeTimestampsOutput(resp *client.TTSWithTimestampsResponse, path, format string) error {
+	var data []byte
+	var err error
+	switch format {
+	case "json":
+		data, err = json.MarshalIndent(resp, "", "  ")
+		if err == nil {
+			data = append(data, '\n')
+		}
+	case "srt":
+		var s string
+		s, err = resp.ToSRT()
+		data = []byte(s)
+	case "vtt":
+		var s string
+		s, err = resp.ToVTT()
+		data = []byte(s)
+	default:
+		err = fmt.Errorf("unsupported timestamps format %q", format)
+	}
+	if err != nil {
+		return fmt.Errorf("timestamp generation failed: %w", err)
+	}
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return fmt.Errorf("failed to write timestamps to %s: %w", path, err)
+	}
+	return nil
 }
 
 func buildTTSRequest(cmd *cobra.Command, text string) (client.TTSRequest, error) {
@@ -236,6 +349,12 @@ func init() {
 	viper.BindPFlag("format", f.Lookup("format"))
 	f.Int("seed", -1, "Random seed for reproducible output")
 	viper.BindPFlag("seed", f.Lookup("seed"))
+	f.String("timestamps-out", "", "Save timestamp alignment output to a file (json, srt, or vtt)")
+	viper.BindPFlag("timestamps_out", f.Lookup("timestamps-out"))
+	f.String("timestamps-format", "", "Timestamp output format (json, srt, vtt; inferred from --timestamps-out when omitted)")
+	viper.BindPFlag("timestamps_format", f.Lookup("timestamps-format"))
+	f.String("granularity", "", "Timestamp alignment granularity (word, char, both)")
+	viper.BindPFlag("granularity", f.Lookup("granularity"))
 }
 
 func initConfig() {

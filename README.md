@@ -185,36 +185,44 @@ cast voices list --use-case Audiobook --gender female
 cast config set voice-id tc_xxx
 ```
 
-### Captions
+### Timestamps
 
-Generate timestamp-aligned subtitles (SRT or WebVTT) alongside the audio. `cast captions` calls `POST /v1/text-to-speech/with-timestamps` and groups the returned word/character alignment into cues that match the Python, JS, and Go SDK output (sentence boundary + 7s/42-char limit per cue).
+Save timestamp alignment data alongside the generated audio. `--timestamps-out`
+calls `POST /v1/text-to-speech/with-timestamps` and can write raw JSON, SRT, or
+WebVTT.
 
 ```bash
-# SRT captions only (no audio file)
-cast captions "Hello, world. This is a test." \
-  --format srt \
-  --captions-out hello.srt
+# Save audio and raw timestamp JSON together
+cast "Hello, world. This is a test." \
+  --out hello.wav \
+  --timestamps-out hello.timestamps.json
 
-# Save audio + captions together
-cast captions "Hello, world. This is a test." \
-  --format vtt \
-  --captions-out hello.vtt \
-  --audio-out hello.wav
+# Save audio and SRT subtitles
+cast "Hello, world. This is a test." \
+  --out hello.wav \
+  --timestamps-out hello.srt
 
-# Non-whitespace languages (jpn, zho) — auto-fallback to character granularity
-cast captions "こんにちは。世界。" \
+# Save audio and WebVTT subtitles
+cast "Hello, world. This is a test." \
+  --out hello.wav \
+  --timestamps-out hello.vtt \
+  --timestamps-format vtt
+
+# Non-whitespace languages (jpn, zho) default to character granularity
+cast "こんにちは。世界。" \
   --language jpn \
-  --format srt \
-  --captions-out hello.srt
+  --out hello.wav \
+  --timestamps-out hello.srt
 
-# Or pass --granularity explicitly
-cast captions "Hello, world." \
-  --format srt \
-  --captions-out hello.srt \
+# Or pass granularity explicitly
+cast "Hello, world." \
+  --out hello.wav \
+  --timestamps-out hello.srt \
   --granularity both
 ```
 
-The `captions` subcommand accepts the same TTS flags as the root command (`--voice-id`, `--model`, `--emotion`, `--emotion-preset`, `--volume`, `--pitch`, `--tempo`, `--seed`, etc.). Note that `--format` here is the **caption** format (`srt` / `vtt`); use `--audio-format` to set the audio file format (`wav` / `mp3`).
+When `--timestamps-format` is omitted, cast infers `srt` or `vtt` from the
+`--timestamps-out` extension and falls back to `json`.
 
 ### Auth
 
