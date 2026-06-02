@@ -57,9 +57,9 @@ var rootCmd = &cobra.Command{
 		}
 
 		format := viper.GetString("format")
-		timestampsOut, _ := cmd.Flags().GetString("timestamps-out")
-		timestampsFormat, _ := cmd.Flags().GetString("timestamps-format")
-		granularity, _ := cmd.Flags().GetString("granularity")
+		timestampsOut := viper.GetString("timestamps_out")
+		timestampsFormat := viper.GetString("timestamps_format")
+		granularity := viper.GetString("granularity")
 
 		baseURL := viper.GetString("base_url")
 		var c *client.Client

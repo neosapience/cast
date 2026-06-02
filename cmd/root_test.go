@@ -442,9 +442,6 @@ func resetFlags() {
 	f.Set("granularity", "")
 	viper.Set("format", "")
 	viper.Set("language", "")
-	viper.Set("timestamps_out", "")
-	viper.Set("timestamps_format", "")
-	viper.Set("granularity", "")
 }
 
 func TestRootCmd_TextValidation(t *testing.T) {
