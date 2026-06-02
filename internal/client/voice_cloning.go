@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"mime"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
@@ -128,34 +127,59 @@ func openCloneAudioFile(path string) (*os.File, string, int64, error) {
 		return nil, "", 0, fmt.Errorf("audio file must be 25 MB or smaller, got %d bytes", info.Size())
 	}
 
-	contentType, err := cloneAudioContentType(path)
-	if err != nil {
-		return nil, "", 0, err
-	}
-
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, "", 0, fmt.Errorf("failed to open audio file: %w", err)
 	}
 
+	contentType, err := cloneAudioContentType(f, path)
+	if err != nil {
+		_ = f.Close()
+		return nil, "", 0, err
+	}
+
 	return f, contentType, info.Size(), nil
 }
 
-func cloneAudioContentType(path string) (string, error) {
+func cloneAudioContentType(f *os.File, path string) (string, error) {
+	buf := make([]byte, 512)
+	n, err := f.Read(buf)
+	if err != nil && err != io.EOF {
+		return "", fmt.Errorf("failed to read audio file header: %w", err)
+	}
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		return "", fmt.Errorf("failed to rewind audio file: %w", err)
+	}
+	header := buf[:n]
+
 	ext := strings.ToLower(filepath.Ext(path))
 	switch ext {
 	case ".wav":
-		return "audio/wav", nil
+		if isWAVHeader(header) {
+			return "audio/wav", nil
+		}
 	case ".mp3":
-		return "audio/mpeg", nil
+		if isMP3Header(header) {
+			return "audio/mpeg", nil
+		}
+	default:
+		return "", fmt.Errorf("audio file must be WAV or MP3: %s", path)
 	}
 
-	if ct := mime.TypeByExtension(ext); ct == "audio/wav" || ct == "audio/x-wav" {
-		return "audio/wav", nil
-	} else if ct == "audio/mpeg" {
-		return "audio/mpeg", nil
+	return "", fmt.Errorf("audio file content does not match %s format: %s", strings.TrimPrefix(ext, "."), path)
+}
+
+func isWAVHeader(header []byte) bool {
+	return len(header) >= 12 &&
+		string(header[0:4]) == "RIFF" &&
+		string(header[8:12]) == "WAVE"
+}
+
+func isMP3Header(header []byte) bool {
+	if len(header) >= 3 && string(header[0:3]) == "ID3" {
+		return true
 	}
-	return "", fmt.Errorf("audio file must be WAV or MP3: %s", path)
+	return len(header) >= 2 && header[0] == 0xFF && header[1]&0xE0 == 0xE0
 }
 
 func escapeQuotes(s string) string {

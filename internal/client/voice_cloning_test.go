@@ -2,7 +2,6 @@ package client
 
 import (
 	"encoding/json"
-	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -11,7 +10,7 @@ import (
 )
 
 func TestCloneVoice_SendsMultipartRequest(t *testing.T) {
-	audioPath := writeTempAudio(t, "sample.wav", []byte("RIFFdata"))
+	audioPath := writeTempAudio(t, "sample.wav", testWAVBytes())
 
 	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/voices/clone" {
@@ -41,7 +40,7 @@ func TestCloneVoice_SendsMultipartRequest(t *testing.T) {
 		if err != nil {
 			t.Fatalf("missing file field: %v", err)
 		}
-		defer file.Close()
+		defer func() { _ = file.Close() }()
 		if header.Filename != "sample.wav" {
 			t.Errorf("filename: want sample.wav, got %q", header.Filename)
 		}
@@ -70,13 +69,13 @@ func TestCloneVoice_SendsMultipartRequest(t *testing.T) {
 	if voice.NextStepVoiceID != "uc_clone_123" || voice.NextStepModel != "ssfm-v30" {
 		t.Errorf("unexpected handoff fields: %+v", voice)
 	}
-	if voice.FileSize != int64(len("RIFFdata")) {
-		t.Errorf("file size: want %d, got %d", len("RIFFdata"), voice.FileSize)
+	if voice.FileSize != int64(len(testWAVBytes())) {
+		t.Errorf("file size: want %d, got %d", len(testWAVBytes()), voice.FileSize)
 	}
 }
 
 func TestCloneVoice_ValidatesInputs(t *testing.T) {
-	audioPath := writeTempAudio(t, "sample.wav", []byte("RIFFdata"))
+	audioPath := writeTempAudio(t, "sample.wav", testWAVBytes())
 
 	c := NewWithBaseURL("test-api-key", "http://127.0.0.1:1")
 	cases := []struct {
@@ -116,9 +115,11 @@ func TestCloneVoice_ValidatesInputs(t *testing.T) {
 
 func TestOpenCloneAudioFile_ValidatesFile(t *testing.T) {
 	dir := t.TempDir()
-	wav := writeTempAudio(t, "sample.wav", []byte("RIFFdata"))
-	mp3 := writeTempAudio(t, "sample.mp3", []byte("ID3data"))
+	wav := writeTempAudio(t, "sample.wav", testWAVBytes())
+	mp3 := writeTempAudio(t, "sample.mp3", testMP3Bytes())
 	txt := writeTempAudio(t, "sample.txt", []byte("not audio"))
+	fakeWav := writeTempAudio(t, "fake.wav", []byte("not audio"))
+	fakeMP3 := writeTempAudio(t, "fake.mp3", []byte("not audio"))
 
 	large := filepath.Join(t.TempDir(), "large.wav")
 	f, err := os.Create(large)
@@ -128,7 +129,9 @@ func TestOpenCloneAudioFile_ValidatesFile(t *testing.T) {
 	if err := f.Truncate(MaxCloneAudioSize + 1); err != nil {
 		t.Fatalf("Truncate large file: %v", err)
 	}
-	f.Close()
+	if err := f.Close(); err != nil {
+		t.Fatalf("Close large file: %v", err)
+	}
 
 	cases := []struct {
 		name        string
@@ -141,6 +144,8 @@ func TestOpenCloneAudioFile_ValidatesFile(t *testing.T) {
 		{name: "missing", path: filepath.Join(t.TempDir(), "missing.wav"), wantErr: "audio file not found"},
 		{name: "directory", path: dir, wantErr: "audio file path is a directory"},
 		{name: "unsupported extension", path: txt, wantErr: "audio file must be WAV or MP3"},
+		{name: "fake wav", path: fakeWav, wantErr: "audio file content does not match wav format"},
+		{name: "fake mp3", path: fakeMP3, wantErr: "audio file content does not match mp3 format"},
 		{name: "too large", path: large, wantErr: "audio file must be 25 MB or smaller"},
 	}
 
@@ -148,7 +153,7 @@ func TestOpenCloneAudioFile_ValidatesFile(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			file, contentType, _, err := openCloneAudioFile(tc.path)
 			if file != nil {
-				file.Close()
+				_ = file.Close()
 			}
 			if tc.wantErr != "" {
 				if err == nil {
@@ -249,6 +254,10 @@ func writeTempAudio(t *testing.T, name string, data []byte) string {
 	return path
 }
 
-func multipartFileContentType(header *multipart.FileHeader) string {
-	return header.Header.Get("Content-Type")
+func testWAVBytes() []byte {
+	return []byte("RIFF\x24\x00\x00\x00WAVEfmt ")
+}
+
+func testMP3Bytes() []byte {
+	return []byte("ID3\x04\x00\x00\x00\x00\x00\x00")
 }
