@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 
 	"github.com/neosapience/cast/internal/client"
@@ -14,6 +16,7 @@ var subscriptionCmd = &cobra.Command{
 	Use:   "subscription",
 	Short: "Show current subscription details",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		asJSON, _ := cmd.Flags().GetBool("json")
 		baseURL := viper.GetString("base_url")
 		var c *client.Client
 		if baseURL != "" {
@@ -28,6 +31,17 @@ var subscriptionCmd = &cobra.Command{
 		}
 
 		remaining := sub.Credits.PlanCredits - sub.Credits.UsedCredits
+		if asJSON {
+			enc := json.NewEncoder(os.Stdout)
+			enc.SetIndent("", "  ")
+			return enc.Encode(struct {
+				*client.SubscriptionResponse
+				RemainingCredits int64 `json:"remaining_credits"`
+			}{
+				SubscriptionResponse: sub,
+				RemainingCredits:     remaining,
+			})
+		}
 
 		fmt.Printf("Plan:        %s\n", sub.Plan)
 		fmt.Printf("Credits:     %s / %s used\n",
@@ -65,5 +79,6 @@ func formatInt(n int64) string {
 }
 
 func init() {
+	subscriptionCmd.Flags().Bool("json", false, "Output as JSON instead of human-readable text")
 	rootCmd.AddCommand(subscriptionCmd)
 }

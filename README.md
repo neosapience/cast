@@ -193,6 +193,15 @@ cast login <api_key>    # pass directly
 cast logout             # remove saved key
 ```
 
+### Subscription
+
+Check your current plan, credit usage, remaining credits, and concurrency limit.
+
+```bash
+cast subscription
+cast subscription --json
+```
+
 ### Config
 
 Set default values so you don't have to pass flags every time.
