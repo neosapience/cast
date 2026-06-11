@@ -15,9 +15,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:          "cast [text]",
-	Short:        "Typecast TTS CLI",
-	Args:         cobra.MaximumNArgs(1),
+	Use:           "cast [text]",
+	Short:         "Typecast TTS CLI",
+	Args:          cobra.MaximumNArgs(1),
 	SilenceErrors: true,
 	SilenceUsage:  true,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -146,6 +146,8 @@ func buildTTSRequest(cmd *cobra.Command, text string) (client.TTSRequest, error)
 	tempo := viper.GetFloat64("tempo")
 	format := viper.GetString("format")
 	seed := viper.GetInt("seed")
+	targetLUFS := viper.GetFloat64("target_lufs")
+	targetLUFSSet := flags.Changed("target-lufs")
 
 	// Validate all params before producing any side effects (e.g. warning messages).
 	if emotion != "" && emotion != "smart" && emotion != "preset" {
@@ -169,6 +171,14 @@ func buildTTSRequest(cmd *cobra.Command, text string) (client.TTSRequest, error)
 		if volume < minVolume || volume > maxVolume {
 			return client.TTSRequest{}, fmt.Errorf("volume must be between %d and %d, got %d", minVolume, maxVolume, volume)
 		}
+	}
+	if targetLUFSSet {
+		if targetLUFS < minTargetLUFS || targetLUFS > maxTargetLUFS {
+			return client.TTSRequest{}, fmt.Errorf("target-lufs must be between %.1f and %.1f, got %g", minTargetLUFS, maxTargetLUFS, targetLUFS)
+		}
+	}
+	if volume >= 0 && targetLUFSSet {
+		return client.TTSRequest{}, fmt.Errorf("cannot use both --volume and --target-lufs")
 	}
 	// pitch uses 0 as both sentinel and valid value; pitch=0 (no change) is
 	// semantically equivalent to omitting it, so this does not cause data loss.
@@ -214,7 +224,10 @@ func buildTTSRequest(cmd *cobra.Command, text string) (client.TTSRequest, error)
 
 	out := &client.TTSOutput{}
 	hasOutput := false
-	if volume >= 0 {
+	if targetLUFSSet {
+		out.TargetLUFS = &targetLUFS
+		hasOutput = true
+	} else if volume >= 0 {
 		out.Volume = &volume
 		hasOutput = true
 	}
@@ -287,6 +300,8 @@ func init() {
 	viper.BindPFlag("seed", f.Lookup("seed"))
 	f.Bool("stream", false, "Stream audio chunks in real-time")
 	viper.BindPFlag("stream", f.Lookup("stream"))
+	f.Float64("target-lufs", 0, "Target loudness in LUFS (-70 to 0, mutually exclusive with --volume)")
+	viper.BindPFlag("target_lufs", f.Lookup("target-lufs"))
 }
 
 func initConfig() {
