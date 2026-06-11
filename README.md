@@ -187,42 +187,55 @@ cast config set voice-id tc_xxx
 
 ### Timestamps
 
-Save timestamp alignment data alongside the generated audio. `--timestamps-out`
-calls `POST /v1/text-to-speech/with-timestamps` and can write raw JSON, SRT, or
-WebVTT.
+Save timestamp alignment data alongside the generated audio. Any of
+`--timestamp-out`, `--timestamp-format`, or `--timestamp-granularity` switches on
+the timestamps flow, which calls `POST /v1/text-to-speech/with-timestamps` and
+can write raw JSON, SRT, or WebVTT.
 
 ```bash
 # Save audio and raw timestamp JSON together
 cast "Hello, world. This is a test." \
   --out hello.wav \
-  --timestamps-out hello.timestamps.json
+  --timestamp-out hello.timestamps.json
 
 # Save audio and SRT subtitles
 cast "Hello, world. This is a test." \
   --out hello.wav \
-  --timestamps-out hello.srt
+  --timestamp-out hello.srt
 
 # Save audio and WebVTT subtitles
 cast "Hello, world. This is a test." \
   --out hello.wav \
-  --timestamps-out hello.vtt \
-  --timestamps-format vtt
+  --timestamp-out hello.vtt \
+  --timestamp-format vtt
 
 # Non-whitespace languages (jpn, zho) default to character granularity
 cast "こんにちは。世界。" \
   --language jpn \
   --out hello.wav \
-  --timestamps-out hello.srt
+  --timestamp-out hello.srt
+
+# Derive the timestamps path from --out: writes hello.srt next to hello.wav
+cast "Hello, world." \
+  --out hello.wav \
+  --timestamp-format srt
 
 # Or pass granularity explicitly
 cast "Hello, world." \
   --out hello.wav \
-  --timestamps-out hello.srt \
-  --granularity both
+  --timestamp-out hello.srt \
+  --timestamp-granularity both
 ```
 
-When `--timestamps-format` is omitted, cast infers `srt` or `vtt` from the
-`--timestamps-out` extension and falls back to `json`.
+Resolution rules:
+
+- **Path** — when `--timestamp-out` is omitted, the path is derived from `--out`
+  by swapping its extension (`hello.wav` → `hello.srt`). Timestamp flags without
+  either `--out` or `--timestamp-out` are an error.
+- **Format** — `--timestamp-format` wins; otherwise inferred from the
+  `--timestamp-out` extension; otherwise `json`.
+- **Granularity** — defaults to `char` for non-whitespace languages (`jpn`,
+  `zho`) and the server default (`word`) elsewhere.
 
 ### Auth
 

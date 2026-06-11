@@ -47,6 +47,26 @@ type TTSWithTimestampsResponse struct {
 	Characters    []AlignmentSegmentCharacter `json:"characters"`
 }
 
+// TimestampsView is the alignment-only projection written by
+// --timestamp-format json. It deliberately omits the base64 Audio field so the
+// JSON timestamps file holds only timing data, mirroring the SRT/VTT outputs.
+type TimestampsView struct {
+	AudioFormat   string                      `json:"audio_format"`
+	AudioDuration float64                     `json:"audio_duration,omitempty"`
+	Words         []AlignmentSegmentWord      `json:"words,omitempty"`
+	Characters    []AlignmentSegmentCharacter `json:"characters,omitempty"`
+}
+
+// TimestampsView returns the response without the base64 audio payload.
+func (r *TTSWithTimestampsResponse) TimestampsView() TimestampsView {
+	return TimestampsView{
+		AudioFormat:   r.AudioFormat,
+		AudioDuration: r.AudioDuration,
+		Words:         r.Words,
+		Characters:    r.Characters,
+	}
+}
+
 // TextToSpeechWithTimestamps calls POST /v1/text-to-speech/with-timestamps.
 // granularity must be one of "", "word", "char", "both" (empty falls back to
 // the server default which is "word"). For non-whitespace languages such as
