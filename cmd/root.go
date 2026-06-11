@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -106,7 +107,9 @@ var rootCmd = &cobra.Command{
 				tmp.Close()
 				return err
 			}
-			tmp.Close()
+			if err := tmp.Close(); err != nil {
+				return fmt.Errorf("failed to close temp audio file: %w", err)
+			}
 
 			if format == "" {
 				format = "wav"
@@ -147,7 +150,15 @@ func buildTTSRequest(cmd *cobra.Command, text string) (client.TTSRequest, error)
 	format := viper.GetString("format")
 	seed := viper.GetInt("seed")
 	targetLUFS := viper.GetFloat64("target_lufs")
-	targetLUFSSet := flags.Changed("target-lufs")
+	targetLUFSEnvValue, targetLUFSEnvSet := os.LookupEnv("TYPECAST_TARGET_LUFS")
+	if targetLUFSEnvSet && !flags.Changed("target-lufs") {
+		parsedTargetLUFS, err := strconv.ParseFloat(targetLUFSEnvValue, 64)
+		if err != nil {
+			return client.TTSRequest{}, fmt.Errorf("target-lufs must be a number, got %q", targetLUFSEnvValue)
+		}
+		targetLUFS = parsedTargetLUFS
+	}
+	targetLUFSSet := flags.Changed("target-lufs") || targetLUFSEnvSet || viper.InConfig("target_lufs")
 
 	// Validate all params before producing any side effects (e.g. warning messages).
 	if emotion != "" && emotion != "smart" && emotion != "preset" {

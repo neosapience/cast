@@ -150,6 +150,7 @@ func resetSubscriptionTestConfig() {
 		flag.Changed = false
 	}
 	viper.Set("base_url", "")
+	viper.Set("api_key", "")
 	viper.Set("emotion", "")
 	viper.Set("emotion_preset", "")
 	viper.Set("prev_text", "")

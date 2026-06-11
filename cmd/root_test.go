@@ -380,6 +380,22 @@ func TestRootCmd_TargetLufsExplicitZero(t *testing.T) {
 	}
 }
 
+func TestRootCmd_TargetLufsFromEnv(t *testing.T) {
+	resetFlags()
+	t.Setenv("TYPECAST_TARGET_LUFS", "-16")
+
+	req, err := buildTTSRequest(rootCmd, "hello")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if req.Output == nil || req.Output.TargetLUFS == nil {
+		t.Fatal("expected target_lufs to be set from env")
+	}
+	if *req.Output.TargetLUFS != -16.0 {
+		t.Errorf("target_lufs: want -16, got %g", *req.Output.TargetLUFS)
+	}
+}
+
 func TestRootCmd_TargetLufsNotSetByDefault(t *testing.T) {
 	resetFlags()
 

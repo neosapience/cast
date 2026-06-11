@@ -15,6 +15,7 @@ import (
 var subscriptionCmd = &cobra.Command{
 	Use:   "subscription",
 	Short: "Show current subscription details",
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		asJSON, _ := cmd.Flags().GetBool("json")
 		baseURL := viper.GetString("base_url")

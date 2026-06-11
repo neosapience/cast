@@ -72,6 +72,7 @@ var configKeys = map[string]string{
 	"emotion-preset":    "emotion_preset",
 	"emotion-intensity": "emotion_intensity",
 	"volume":            "volume",
+	"target-lufs":       "target_lufs",
 	"pitch":             "pitch",
 	"tempo":             "tempo",
 	"format":            "format",
@@ -87,7 +88,7 @@ var configSetCmd = &cobra.Command{
 	Use:   "set <key> <value>",
 	Short: "Set a default value",
 	Long: "Set a default value in ~/.typecast/config.yaml\n\nAvailable keys: " +
-		"voice-id, model, language, emotion, emotion-preset, emotion-intensity, volume, pitch, tempo, format, base-url",
+		"voice-id, model, language, emotion, emotion-preset, emotion-intensity, volume, target-lufs, pitch, tempo, format, base-url",
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		key, value := args[0], args[1]

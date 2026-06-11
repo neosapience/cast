@@ -26,7 +26,9 @@ func TestGetMySubscription_Success(t *testing.T) {
 		if r.Method != http.MethodGet {
 			t.Errorf("unexpected method: %s", r.Method)
 		}
-		json.NewEncoder(w).Encode(want)
+		if err := json.NewEncoder(w).Encode(want); err != nil {
+			t.Fatalf("encode response: %v", err)
+		}
 	})
 
 	sub, err := c.GetMySubscription()
