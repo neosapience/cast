@@ -166,6 +166,7 @@ func resolveTimestampsPath(timestampsOut, outFile, format string) string {
 }
 
 func resolveGranularity(language, granularity string) (string, error) {
+	language = strings.ToLower(strings.TrimSpace(language))
 	granularity = strings.ToLower(granularity)
 	if granularity == "" && (language == "jpn" || language == "zho") {
 		fmt.Fprintf(os.Stderr, "language %q has no whitespace, defaulting --timestamp-granularity char\n", language)

@@ -1,6 +1,10 @@
 package client
 
-import "testing"
+import (
+	"encoding/json"
+	"strings"
+	"testing"
+)
 
 func TestFormatSRTTime(t *testing.T) {
 	cases := []struct {
@@ -175,5 +179,20 @@ func TestTextToSpeechWithTimestampsValidation(t *testing.T) {
 	}
 	if _, err := c.TextToSpeechWithTimestamps(TTSRequestWithTimestamps{VoiceID: "v", Text: "t"}, ""); err == nil {
 		t.Errorf("expected error when model is missing")
+	}
+	if _, err := c.TextToSpeechWithTimestamps(TTSRequestWithTimestamps{VoiceID: "v", Text: "t", Model: "ssfm-v30"}, "sentence"); err == nil {
+		t.Errorf("expected error for invalid granularity")
+	}
+}
+
+func TestTimestampsViewKeepsZeroAudioDuration(t *testing.T) {
+	// audio_duration must stay in the JSON contract even when zero, so a fixed
+	// schema consumer never sees the key vanish.
+	data, err := json.Marshal((&TTSWithTimestampsResponse{AudioFormat: "wav"}).TimestampsView())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(string(data), `"audio_duration"`) {
+		t.Errorf("audio_duration key missing from %s", string(data))
 	}
 }

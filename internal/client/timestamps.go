@@ -52,7 +52,7 @@ type TTSWithTimestampsResponse struct {
 // JSON timestamps file holds only timing data, mirroring the SRT/VTT outputs.
 type TimestampsView struct {
 	AudioFormat   string                      `json:"audio_format"`
-	AudioDuration float64                     `json:"audio_duration,omitempty"`
+	AudioDuration float64                     `json:"audio_duration"`
 	Words         []AlignmentSegmentWord      `json:"words,omitempty"`
 	Characters    []AlignmentSegmentCharacter `json:"characters,omitempty"`
 }
@@ -81,6 +81,13 @@ func (c *Client) TextToSpeechWithTimestamps(req TTSRequestWithTimestamps, granul
 	}
 	if req.Model == "" {
 		return nil, errors.New("model is required")
+	}
+
+	granularity = strings.ToLower(granularity)
+	switch granularity {
+	case "", "word", "char", "both":
+	default:
+		return nil, fmt.Errorf("granularity must be one of '', 'word', 'char', 'both', got %q", granularity)
 	}
 
 	path := "/v1/text-to-speech/with-timestamps"
