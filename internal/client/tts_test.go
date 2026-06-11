@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -83,4 +84,71 @@ func TestTextToSpeech_SendsOptionalFields(t *testing.T) {
 		Output:  &TTSOutput{Volume: &volume},
 		Seed:    &seed,
 	})
+}
+
+func TestTextToSpeechStream_Success(t *testing.T) {
+	// Server sends a known body in one write; the client should deliver all bytes via onChunk.
+	want := bytes.Repeat([]byte("ABCD"), 4096) // 16KB to exercise multiple reads
+	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/text-to-speech/stream" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST, got %s", r.Method)
+		}
+
+		var body TTSRequest
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("failed to decode request body: %v", err)
+		}
+		if body.VoiceID != "voice-1" {
+			t.Errorf("expected voice_id=voice-1, got %q", body.VoiceID)
+		}
+
+		w.Write(want)
+	})
+
+	var got bytes.Buffer
+	err := c.TextToSpeechStream(TTSRequest{VoiceID: "voice-1", Text: "hello", Model: "ssfm-v30"}, func(chunk []byte) error {
+		got.Write(chunk)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !bytes.Equal(got.Bytes(), want) {
+		t.Errorf("received %d bytes, want %d", got.Len(), len(want))
+	}
+}
+
+func TestTextToSpeechStream_NilCallback(t *testing.T) {
+	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("server should not be called when callback is nil")
+	})
+
+	err := c.TextToSpeechStream(TTSRequest{VoiceID: "v1", Text: "hello"}, nil)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !bytes.Contains([]byte(err.Error()), []byte("onChunk callback must not be nil")) {
+		t.Errorf("expected nil callback error, got: %v", err)
+	}
+}
+
+func TestTextToSpeechStream_Error(t *testing.T) {
+	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte(`{"message":"unauthorized"}`))
+	})
+
+	err := c.TextToSpeechStream(TTSRequest{VoiceID: "v1", Text: "hello"}, func(chunk []byte) error {
+		t.Fatal("onChunk should not be called on error")
+		return nil
+	})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !bytes.Contains([]byte(err.Error()), []byte("authentication failed")) {
+		t.Errorf("expected authentication error, got: %v", err)
+	}
 }

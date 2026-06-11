@@ -65,6 +65,55 @@ var rootCmd = &cobra.Command{
 			c = client.New(viper.GetString("api_key"))
 		}
 
+		stream := viper.GetBool("stream")
+
+		if stream {
+			fmt.Fprintln(os.Stderr, "Streaming...")
+
+			if outFile != "" {
+				f, err := os.Create(outFile)
+				if err != nil {
+					return fmt.Errorf("failed to create output file: %w", err)
+				}
+
+				streamErr := c.TextToSpeechStream(req, func(chunk []byte) error {
+					_, err := f.Write(chunk)
+					return err
+				})
+				if closeErr := f.Close(); closeErr != nil && streamErr == nil {
+					streamErr = fmt.Errorf("failed to close output file: %w", closeErr)
+				}
+				if streamErr != nil {
+					os.Remove(outFile)
+					return streamErr
+				}
+				fmt.Fprintf(os.Stderr, "saved to %s\n", outFile)
+				return nil
+			}
+
+			// No output file: stream to temp file, then play
+			tmp, err := os.CreateTemp("", "cast-stream-*."+format)
+			if err != nil {
+				return err
+			}
+			tmpName := tmp.Name()
+			defer os.Remove(tmpName)
+
+			if err := c.TextToSpeechStream(req, func(chunk []byte) error {
+				_, err := tmp.Write(chunk)
+				return err
+			}); err != nil {
+				tmp.Close()
+				return err
+			}
+			tmp.Close()
+
+			if format == "" {
+				format = "wav"
+			}
+			return playFile(tmpName, format)
+		}
+
 		audio, err := c.TextToSpeech(req)
 		if err != nil {
 			return err
@@ -236,6 +285,8 @@ func init() {
 	viper.BindPFlag("format", f.Lookup("format"))
 	f.Int("seed", -1, "Random seed for reproducible output")
 	viper.BindPFlag("seed", f.Lookup("seed"))
+	f.Bool("stream", false, "Stream audio chunks in real-time")
+	viper.BindPFlag("stream", f.Lookup("stream"))
 }
 
 func initConfig() {
