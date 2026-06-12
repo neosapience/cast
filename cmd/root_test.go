@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -287,6 +288,162 @@ func TestRootCmd_OutFileFormatInferredFromExtension(t *testing.T) {
 	}
 }
 
+func TestRootCmd_TimestampsOutSRTSavedWithAudio(t *testing.T) {
+	var gotGranularity string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/text-to-speech/with-timestamps" {
+			t.Errorf("expected timestamps path, got %s", r.URL.Path)
+		}
+		gotGranularity = r.URL.Query().Get("granularity")
+		json.NewEncoder(w).Encode(map[string]any{
+			"audio":        base64.StdEncoding.EncodeToString([]byte("timestamp-audio")),
+			"audio_format": "wav",
+			"words": []map[string]any{
+				{"text": "Hello.", "start": 0.0, "end": 0.5},
+				{"text": "World.", "start": 0.5, "end": 1.0},
+			},
+		})
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	audioOut := filepath.Join(dir, "out.wav")
+	timestampsOut := filepath.Join(dir, "out.srt")
+	resetFlags()
+	rootCmd.SetArgs([]string{
+		"hello",
+		"--base-url", srv.URL,
+		"--out", audioOut,
+		"--timestamp-out", timestampsOut,
+		"--timestamp-granularity", "both",
+	})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if gotGranularity != "both" {
+		t.Errorf("granularity: want both, got %q", gotGranularity)
+	}
+
+	audio, err := os.ReadFile(audioOut)
+	if err != nil {
+		t.Fatalf("audio output not found: %v", err)
+	}
+	if string(audio) != "timestamp-audio" {
+		t.Errorf("audio output: want timestamp-audio, got %q", string(audio))
+	}
+
+	srt, err := os.ReadFile(timestampsOut)
+	if err != nil {
+		t.Fatalf("timestamps output not found: %v", err)
+	}
+	if !strings.Contains(string(srt), "00:00:00,000 --> 00:00:00,500") {
+		t.Errorf("unexpected SRT output: %s", string(srt))
+	}
+}
+
+func TestRootCmd_TimestampsOutJSONSaved(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(map[string]any{
+			"audio":          base64.StdEncoding.EncodeToString([]byte("timestamp-audio")),
+			"audio_format":   "wav",
+			"audio_duration": 1.0,
+			"words": []map[string]any{
+				{"text": "Hello.", "start": 0.0, "end": 0.5},
+			},
+		})
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	audioOut := filepath.Join(dir, "out.wav")
+	timestampsOut := filepath.Join(dir, "out.timestamps")
+	resetFlags()
+	rootCmd.SetArgs([]string{
+		"hello",
+		"--base-url", srv.URL,
+		"--out", audioOut,
+		"--timestamp-out", timestampsOut,
+	})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	data, err := os.ReadFile(timestampsOut)
+	if err != nil {
+		t.Fatalf("timestamps output not found: %v", err)
+	}
+	var parsed map[string]any
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("expected JSON timestamps output, got %v: %s", err, string(data))
+	}
+	if parsed["audio_format"] != "wav" {
+		t.Errorf("audio_format: want wav, got %v", parsed["audio_format"])
+	}
+	if _, ok := parsed["audio"]; ok {
+		t.Errorf("timestamps JSON must not embed the base64 audio payload, got keys %v", parsed)
+	}
+}
+
+func TestRootCmd_TimestampFlagRequiresOutput(t *testing.T) {
+	cases := []struct {
+		name string
+		args []string
+	}{
+		{"format only", []string{"hello", "--timestamp-format", "srt"}},
+		{"granularity only", []string{"hello", "--timestamp-granularity", "word"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			resetFlags()
+			rootCmd.SetArgs(tc.args)
+			err := rootCmd.Execute()
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if !strings.Contains(err.Error(), "timestamp output requires --out or --timestamp-out") {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestRootCmd_TimestampOutDerivedFromAudioOut(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(map[string]any{
+			"audio":        base64.StdEncoding.EncodeToString([]byte("timestamp-audio")),
+			"audio_format": "wav",
+			"words": []map[string]any{
+				{"text": "Hello.", "start": 0.0, "end": 0.5},
+			},
+		})
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	audioOut := filepath.Join(dir, "hello.wav")
+	resetFlags()
+	// Only --timestamp-format is set; the timestamps path must be derived from
+	// the audio --out by swapping its extension: hello.wav -> hello.srt.
+	rootCmd.SetArgs([]string{
+		"hello",
+		"--base-url", srv.URL,
+		"--out", audioOut,
+		"--timestamp-format", "srt",
+	})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	derived := filepath.Join(dir, "hello.srt")
+	srt, err := os.ReadFile(derived)
+	if err != nil {
+		t.Fatalf("derived timestamps output not found at %s: %v", derived, err)
+	}
+	if !strings.Contains(string(srt), "00:00:00,000 --> 00:00:00,500") {
+		t.Errorf("unexpected SRT output: %s", string(srt))
+	}
+}
+
 // helpers
 
 func intPtr(v int) *int             { return &v }
@@ -339,10 +496,16 @@ func resetFlags() {
 		flag.Value.Set("0")
 		flag.Changed = false
 	}
+	f.Set("timestamp-out", "")
+	f.Set("timestamp-format", "")
+	f.Set("timestamp-granularity", "")
 	viper.Set("format", "")
 	viper.Set("language", "")
 	viper.Set("stream", nil)
 	viper.Set("target_lufs", nil)
+	viper.Set("timestamp_out", nil)
+	viper.Set("timestamp_format", nil)
+	viper.Set("timestamp_granularity", nil)
 }
 
 func TestRootCmd_TargetLufsFlag(t *testing.T) {
