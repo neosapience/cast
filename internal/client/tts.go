@@ -31,13 +31,14 @@ type TTSOutput struct {
 	AudioPitch  *int     `json:"audio_pitch,omitempty"`
 	AudioTempo  *float64 `json:"audio_tempo,omitempty"`
 	AudioFormat string   `json:"audio_format,omitempty"`
+	TargetLUFS  *float64 `json:"target_lufs,omitempty"`
 }
 
 func (c *Client) TextToSpeech(req TTSRequest) ([]byte, error) {
 	return c.post("/v1/text-to-speech", req)
 }
 
-func (c *Client) TextToSpeechStream(req TTSRequest, onChunk func([]byte) error) error {
+func (c *Client) TextToSpeechStream(req TTSRequest, onChunk func([]byte) error) (err error) {
 	if onChunk == nil {
 		return fmt.Errorf("onChunk callback must not be nil")
 	}
@@ -59,7 +60,14 @@ func (c *Client) TextToSpeechStream(req TTSRequest, onChunk func([]byte) error) 
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if _, copyErr := io.Copy(io.Discard, resp.Body); err == nil && copyErr != nil {
+			err = copyErr
+		}
+		if closeErr := resp.Body.Close(); err == nil && closeErr != nil {
+			err = closeErr
+		}
+	}()
 
 	if resp.StatusCode >= 400 {
 		data, _ := io.ReadAll(resp.Body)

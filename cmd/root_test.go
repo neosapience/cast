@@ -80,7 +80,6 @@ func TestBuildTTSRequest_EmotionIntensity(t *testing.T) {
 	}
 }
 
-
 func TestBuildTTSRequest_AudioParams(t *testing.T) {
 	cases := []struct {
 		name       string
@@ -94,23 +93,23 @@ func TestBuildTTSRequest_AudioParams(t *testing.T) {
 		wantFormat string
 	}{
 		{
-			name: "volume and pitch set",
+			name:   "volume and pitch set",
 			volume: "150", pitch: "6",
 			wantVolume: intPtr(150), wantPitch: intPtr(6),
 		},
 		{
-			name: "tempo set",
-			tempo: "1.5",
+			name:      "tempo set",
+			tempo:     "1.5",
 			wantTempo: float64Ptr(1.5),
 		},
 		{
-			name: "format mp3",
-			format: "mp3",
+			name:       "format mp3",
+			format:     "mp3",
 			wantFormat: "mp3",
 		},
 		{
-			name: "negative pitch",
-			pitch: "-6",
+			name:      "negative pitch",
+			pitch:     "-6",
 			wantPitch: intPtr(-6),
 		},
 	}
@@ -290,7 +289,7 @@ func TestRootCmd_OutFileFormatInferredFromExtension(t *testing.T) {
 
 // helpers
 
-func intPtr(v int) *int       { return &v }
+func intPtr(v int) *int             { return &v }
 func float64Ptr(v float64) *float64 { return &v }
 
 func outputField(out interface{}, field string) string {
@@ -336,9 +335,91 @@ func resetFlags() {
 		flag.Value.Set("false")
 		flag.Changed = false
 	}
+	if flag := f.Lookup("target-lufs"); flag != nil {
+		flag.Value.Set("0")
+		flag.Changed = false
+	}
 	viper.Set("format", "")
 	viper.Set("language", "")
 	viper.Set("stream", nil)
+	viper.Set("target_lufs", nil)
+}
+
+func TestRootCmd_TargetLufsFlag(t *testing.T) {
+	resetFlags()
+	rootCmd.Flags().Set("target-lufs", "-14")
+
+	req, err := buildTTSRequest(rootCmd, "hello")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if req.Output == nil || req.Output.TargetLUFS == nil {
+		t.Fatal("expected target_lufs to be set")
+	}
+	if *req.Output.TargetLUFS != -14.0 {
+		t.Errorf("target_lufs: want -14, got %g", *req.Output.TargetLUFS)
+	}
+	if req.Output.Volume != nil {
+		t.Errorf("volume should be nil when target_lufs is set, got %v", *req.Output.Volume)
+	}
+}
+
+func TestRootCmd_TargetLufsExplicitZero(t *testing.T) {
+	resetFlags()
+	rootCmd.Flags().Set("target-lufs", "0")
+
+	req, err := buildTTSRequest(rootCmd, "hello")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if req.Output == nil || req.Output.TargetLUFS == nil {
+		t.Fatal("expected target_lufs to be set when explicitly passing 0")
+	}
+	if *req.Output.TargetLUFS != 0.0 {
+		t.Errorf("target_lufs: want 0, got %g", *req.Output.TargetLUFS)
+	}
+}
+
+func TestRootCmd_TargetLufsFromEnv(t *testing.T) {
+	resetFlags()
+	t.Setenv("TYPECAST_TARGET_LUFS", "-16")
+
+	req, err := buildTTSRequest(rootCmd, "hello")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if req.Output == nil || req.Output.TargetLUFS == nil {
+		t.Fatal("expected target_lufs to be set from env")
+	}
+	if *req.Output.TargetLUFS != -16.0 {
+		t.Errorf("target_lufs: want -16, got %g", *req.Output.TargetLUFS)
+	}
+}
+
+func TestRootCmd_TargetLufsNotSetByDefault(t *testing.T) {
+	resetFlags()
+
+	req, err := buildTTSRequest(rootCmd, "hello")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if req.Output != nil && req.Output.TargetLUFS != nil {
+		t.Errorf("expected target_lufs to be nil when not explicitly set, got %g", *req.Output.TargetLUFS)
+	}
+}
+
+func TestRootCmd_VolumeAndTargetLufsMutuallyExclusive(t *testing.T) {
+	resetFlags()
+	rootCmd.Flags().Set("volume", "100")
+	rootCmd.Flags().Set("target-lufs", "-14")
+
+	_, err := buildTTSRequest(rootCmd, "hello")
+	if err == nil {
+		t.Fatal("expected error when both --volume and --target-lufs are set")
+	}
+	if !strings.Contains(err.Error(), "cannot use both --volume and --target-lufs") {
+		t.Errorf("unexpected error: %v", err)
+	}
 }
 
 func TestRootCmd_TextValidation(t *testing.T) {

@@ -198,6 +198,31 @@ func TestParseClonedVoice_ResponseShapes(t *testing.T) {
 	}
 }
 
+func TestParseClonedVoice_ExplicitHandoffFields(t *testing.T) {
+	voice, err := parseClonedVoice([]byte(`{
+		"voice_id":"tc_base",
+		"cloned_voice_id":"uc_clone",
+		"next_step_voice_id":"uc_next",
+		"next_step_model":"ssfm-v30",
+		"name":"Explicit"
+	}`), "Fallback", "ssfm-v30", 10)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if voice.VoiceID != "tc_base" {
+		t.Errorf("voice_id: want tc_base, got %q", voice.VoiceID)
+	}
+	if voice.ClonedVoiceID != "uc_clone" {
+		t.Errorf("cloned_voice_id: want uc_clone, got %q", voice.ClonedVoiceID)
+	}
+	if voice.NextStepVoiceID != "uc_next" {
+		t.Errorf("next_step_voice_id: want uc_next, got %q", voice.NextStepVoiceID)
+	}
+	if voice.NextStepModel != "ssfm-v30" {
+		t.Errorf("next_step_model: want ssfm-v30, got %q", voice.NextStepModel)
+	}
+}
+
 func TestParseClonedVoice_RejectsMissingOrNonCloneID(t *testing.T) {
 	cases := []struct {
 		name string

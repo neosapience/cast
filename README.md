@@ -75,6 +75,7 @@ cast "Hello, world!" --out hello.mp3 --format mp3
 | `--prev-text` | Previous sentence for context (`--emotion smart` only) | |
 | `--next-text` | Next sentence for context (`--emotion smart` only) | |
 | `--volume` | Volume (0–200) | 100 |
+| `--target-lufs` | Absolute loudness target in LUFS (-70.0–0.0), mutually exclusive with `--volume` | |
 | `--pitch` | Pitch in semitones (–12 to +12) | 0 |
 | `--tempo` | Tempo multiplier (0.5–2.0) | 1.0 |
 | `--format` | Output format (`wav`, `mp3`) | `wav` |
@@ -246,12 +247,13 @@ Set default values so you don't have to pass flags every time.
 cast config set voice-id tc_xxx
 cast config set model ssfm-v21
 cast config set volume 120
+cast config set target-lufs -14.0
 
 cast config list          # show current config
 cast config unset volume  # remove a value
 ```
 
-Available keys: `voice-id`, `model`, `language`, `emotion`, `emotion-preset`, `emotion-intensity`, `volume`, `pitch`, `tempo`, `format`
+Available keys: `voice-id`, `model`, `language`, `emotion`, `emotion-preset`, `emotion-intensity`, `volume`, `target-lufs`, `pitch`, `tempo`, `format`
 
 ## Recipes
 
@@ -259,6 +261,14 @@ Available keys: `voice-id`, `model`, `language`, `emotion`, `emotion-preset`, `e
 ```bash
 cast "$(cat script.txt)"
 ```
+
+**Normalize loudness:**
+```bash
+cast "Hello, world!" --target-lufs -14.0 --out hello.wav
+```
+
+`--target-lufs` accepts values from -70.0 to 0.0 and cannot be used with
+`--volume`.
 
 **Pipe from another command:**
 ```bash
@@ -342,5 +352,6 @@ Any option can be set via environment variable using the `TYPECAST_` prefix:
 | `TYPECAST_EMOTION_INTENSITY` | `--emotion-intensity` |
 | `TYPECAST_FORMAT` | `--format` |
 | `TYPECAST_VOLUME` | `--volume` |
+| `TYPECAST_TARGET_LUFS` | `--target-lufs` |
 | `TYPECAST_PITCH` | `--pitch` |
 | `TYPECAST_TEMPO` | `--tempo` |

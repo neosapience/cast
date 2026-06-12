@@ -35,11 +35,14 @@ type ClonedVoice struct {
 }
 
 type cloneVoicePayload struct {
-	VoiceID    string `json:"voice_id"`
-	VoiceIDAlt string `json:"voiceId"`
-	VoiceName  string `json:"voice_name"`
-	Name       string `json:"name"`
-	Model      string `json:"model"`
+	VoiceID         string `json:"voice_id"`
+	VoiceIDAlt      string `json:"voiceId"`
+	ClonedVoiceID   string `json:"cloned_voice_id"`
+	VoiceName       string `json:"voice_name"`
+	Name            string `json:"name"`
+	Model           string `json:"model"`
+	NextStepVoiceID string `json:"next_step_voice_id"`
+	NextStepModel   string `json:"next_step_model"`
 }
 
 type cloneVoiceEnvelope struct {
@@ -203,11 +206,18 @@ func parseClonedVoice(data []byte, fallbackName, fallbackModel string, fileSize 
 	if voiceID == "" {
 		voiceID = payload.VoiceIDAlt
 	}
+	clonedVoiceID := payload.ClonedVoiceID
+	if clonedVoiceID == "" {
+		clonedVoiceID = voiceID
+	}
 	if voiceID == "" {
+		voiceID = clonedVoiceID
+	}
+	if clonedVoiceID == "" {
 		return nil, fmt.Errorf("voice_id not found in clone response")
 	}
-	if !strings.HasPrefix(voiceID, "uc_") {
-		return nil, fmt.Errorf("clone response returned non-cloned voice ID %q; expected an ID starting with 'uc_'", voiceID)
+	if !strings.HasPrefix(clonedVoiceID, "uc_") {
+		return nil, fmt.Errorf("clone response returned non-cloned voice ID %q; expected an ID starting with 'uc_'", clonedVoiceID)
 	}
 
 	name := payload.Name
@@ -222,15 +232,23 @@ func parseClonedVoice(data []byte, fallbackName, fallbackModel string, fileSize 
 	if model == "" {
 		model = fallbackModel
 	}
+	nextStepVoiceID := payload.NextStepVoiceID
+	if nextStepVoiceID == "" {
+		nextStepVoiceID = clonedVoiceID
+	}
+	nextStepModel := payload.NextStepModel
+	if nextStepModel == "" {
+		nextStepModel = model
+	}
 
 	return &ClonedVoice{
 		VoiceID:         voiceID,
-		ClonedVoiceID:   voiceID,
+		ClonedVoiceID:   clonedVoiceID,
 		VoiceName:       name,
 		Name:            name,
 		Model:           model,
 		FileSize:        fileSize,
-		NextStepVoiceID: voiceID,
-		NextStepModel:   model,
+		NextStepVoiceID: nextStepVoiceID,
+		NextStepModel:   nextStepModel,
 	}, nil
 }
