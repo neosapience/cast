@@ -16,7 +16,7 @@ go install github.com/neosapience/cast@latest
 
 ## Setup
 
-Get your API key at [https://typecast.ai/developers/api/api-key](https://typecast.ai/developers/api/api-key?utm_source=cast&utm_medium=github)
+Get your API key at [https://typecast.ai/developers/api](https://typecast.ai/developers/api?utm_source=cast&utm_medium=github)
 
 ```bash
 cast login
