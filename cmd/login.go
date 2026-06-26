@@ -19,7 +19,7 @@ var loginCmd = &cobra.Command{
 		if len(args) == 1 {
 			apiKey = args[0]
 		} else {
-			const apiKeyURL = "https://typecast.ai/developers/api/api-key?utm_source=cast&utm_medium=cli"
+			const apiKeyURL = "https://typecast.ai/developers/api?utm_source=cast&utm_medium=cli"
 			if err := openBrowser(apiKeyURL); err != nil {
 				fmt.Printf("Open this URL to get your API key:\n  %s\n", apiKeyURL)
 			} else {
