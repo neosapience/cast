@@ -181,6 +181,12 @@ cast voices list --json
 # Get voice details (shows available styles, emotions, and languages)
 cast voices get <voice_id>
 
+# Recommend voices from a text description
+cast voices recommend "warm female voice for product tutorials"
+cast voices recommend "calm narrator for meditation" --count 5 --json
+
+Recommendation results contain only `voice_id`, `voice_name`, and `score`. Run `cast voices get <voice_id>` or `cast voices list` when you need detailed metadata such as models, emotions, gender, age, or use cases.
+
 # Find a voice and save it as default
 cast voices list --use-case Audiobook --gender female
 cast config set voice-id tc_xxx

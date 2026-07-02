@@ -149,6 +149,48 @@ var voicesGetCmd = &cobra.Command{
 	},
 }
 
+var voicesRecommendCmd = &cobra.Command{
+	Use:   "recommend <query>",
+	Short: "Recommend voices from a text description",
+	Long: "Recommend voices from a text description.\n\n" +
+		"The recommendation API returns only voice IDs, names, and similarity scores. " +
+		"Run `cast voices get <voice_id>` when you need detailed metadata such as models, emotions, gender, age, or use cases.",
+	Args: cobra.MinimumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		count, _ := cmd.Flags().GetInt("count")
+		asJSON, _ := cmd.Flags().GetBool("json")
+
+		baseURL := viper.GetString("base_url")
+		var c *client.Client
+		if baseURL != "" {
+			c = client.NewWithBaseURL(viper.GetString("api_key"), baseURL)
+		} else {
+			c = client.New(viper.GetString("api_key"))
+		}
+
+		voices, err := c.RecommendVoices(client.RecommendVoicesParams{
+			Query: strings.Join(args, " "),
+			Count: count,
+		})
+		if err != nil {
+			return err
+		}
+
+		if asJSON {
+			enc := json.NewEncoder(os.Stdout)
+			enc.SetIndent("", "  ")
+			return enc.Encode(voices)
+		}
+
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		fmt.Fprintln(w, "ID\tNAME\tSCORE")
+		for _, v := range voices {
+			fmt.Fprintf(w, "%s\t%s\t%.4f\n", v.VoiceID, v.VoiceName, v.Score)
+		}
+		return w.Flush()
+	},
+}
+
 func init() {
 	voicesListCmd.Flags().String("model", "", "Filter by model (ssfm-v30, ssfm-v21)")
 	voicesListCmd.Flags().String("gender", "", "Filter by gender (male, female)")
@@ -159,9 +201,12 @@ func init() {
 	voicesListCmd.Flags().Bool("json", false, "Output as JSON instead of table")
 
 	voicesGetCmd.Flags().Bool("json", false, "Output as JSON instead of human-readable format")
+	voicesRecommendCmd.Flags().Int("count", 5, "Maximum number of recommended voices to return (1-10)")
+	voicesRecommendCmd.Flags().Bool("json", false, "Output as JSON instead of table")
 
 	voicesCmd.AddCommand(voicesListCmd)
 	voicesCmd.AddCommand(voicesGetCmd)
+	voicesCmd.AddCommand(voicesRecommendCmd)
 	voicesCmd.AddCommand(pickCmd)
 	voicesCmd.AddCommand(randomCmd)
 	voicesCmd.AddCommand(tournamentCmd)

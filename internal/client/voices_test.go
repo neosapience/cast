@@ -86,3 +86,61 @@ func TestGetVoice_ReturnsErrorOnAPIFailure(t *testing.T) {
 		t.Fatal("expected error, got nil")
 	}
 }
+
+func TestRecommendVoices_ReturnsRecommendations(t *testing.T) {
+	want := []RecommendedVoice{
+		{VoiceID: "v1", VoiceName: "Alice", Score: 0.92},
+		{VoiceID: "v2", VoiceName: "Bob", Score: 0.87},
+	}
+
+	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/voices/recommendations" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		q := r.URL.Query()
+		if q.Get("query") != "warm narrator" {
+			t.Errorf("expected query=warm narrator, got %q", q.Get("query"))
+		}
+		if q.Get("count") != "5" {
+			t.Errorf("expected count=5, got %q", q.Get("count"))
+		}
+		json.NewEncoder(w).Encode(want)
+	})
+
+	voices, err := c.RecommendVoices(RecommendVoicesParams{Query: "warm narrator", Count: 5})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(voices) != 2 {
+		t.Fatalf("expected 2 voices, got %d", len(voices))
+	}
+	if voices[0].VoiceID != "v1" || voices[0].Score != 0.92 {
+		t.Errorf("unexpected recommendations: %+v", voices)
+	}
+}
+
+func TestRecommendVoices_ValidatesInput(t *testing.T) {
+	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("server should not be called")
+	})
+
+	if _, err := c.RecommendVoices(RecommendVoicesParams{Query: " ", Count: 5}); err == nil {
+		t.Fatal("expected empty query error")
+	}
+	if _, err := c.RecommendVoices(RecommendVoicesParams{Query: "warm", Count: 11}); err == nil {
+		t.Fatal("expected count range error")
+	}
+}
+
+func TestRecommendVoices_DefaultsCountToFive(t *testing.T) {
+	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if got := r.URL.Query().Get("count"); got != "5" {
+			t.Errorf("expected default count=5, got %q", got)
+		}
+		json.NewEncoder(w).Encode([]RecommendedVoice{})
+	})
+
+	if _, err := c.RecommendVoices(RecommendVoicesParams{Query: "warm narrator"}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
