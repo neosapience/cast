@@ -216,3 +216,26 @@ func TestTextToSpeechStream_Error(t *testing.T) {
 		t.Errorf("expected authentication error, got: %v", err)
 	}
 }
+
+func TestTextToSpeechStream_TextNotSynthesizable(t *testing.T) {
+	requests := 0
+	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		w.Write([]byte(`{"error_code":"TEXT_NOT_SYNTHESIZABLE","message":"The input text contains characters or symbols that cannot be synthesized into speech. Please check your input text."}`))
+	})
+
+	err := c.TextToSpeechStream(TTSRequest{VoiceID: "v1", Text: "????"}, func(chunk []byte) error {
+		t.Fatal("onChunk should not be called on error")
+		return nil
+	})
+	if err == nil {
+		t.Fatal("expected error for 422 response, got nil")
+	}
+	if requests != 1 {
+		t.Fatalf("expected one request, got %d", requests)
+	}
+	if !bytes.Contains([]byte(err.Error()), []byte("unprocessable request")) {
+		t.Fatalf("expected actionable 422 error, got %q", err)
+	}
+}

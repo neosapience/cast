@@ -3,6 +3,7 @@ package client
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -48,6 +49,27 @@ func TestDo_ReturnsErrorOn5xx(t *testing.T) {
 	_, err := c.get("/test")
 	if err == nil {
 		t.Fatal("expected error for 500 response, got nil")
+	}
+}
+
+func TestDo_TextNotSynthesizableIsNotRetried(t *testing.T) {
+	requests := 0
+	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		w.Write([]byte(`{"error_code":"TEXT_NOT_SYNTHESIZABLE","message":"The input text contains characters or symbols that cannot be synthesized into speech. Please check your input text."}`))
+	})
+
+	_, err := c.get("/test")
+	if err == nil {
+		t.Fatal("expected error for 422 response, got nil")
+	}
+	if requests != 1 {
+		t.Fatalf("expected one request, got %d", requests)
+	}
+	want := "unprocessable request: The input text contains characters or symbols that cannot be synthesized"
+	if got := err.Error(); !strings.Contains(got, want) {
+		t.Fatalf("expected actionable 422 message, got %q", got)
 	}
 }
 
