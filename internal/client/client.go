@@ -107,6 +107,8 @@ func (c *Client) do(req *http.Request) ([]byte, error) {
 			return nil, fmt.Errorf("not found: %s", extractErrorMessage(data))
 		case http.StatusBadRequest:
 			return nil, fmt.Errorf("invalid request: %s", extractErrorMessage(data))
+		case http.StatusUnprocessableEntity:
+			return nil, fmt.Errorf("unprocessable request: %s", extractErrorMessage(data))
 		case http.StatusTooManyRequests:
 			return nil, fmt.Errorf("rate limit exceeded: please try again later")
 		default:

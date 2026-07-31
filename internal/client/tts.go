@@ -80,6 +80,8 @@ func (c *Client) TextToSpeechStream(req TTSRequest, onChunk func([]byte) error) 
 			return fmt.Errorf("not found: %s", extractErrorMessage(data))
 		case http.StatusBadRequest:
 			return fmt.Errorf("invalid request: %s", extractErrorMessage(data))
+		case http.StatusUnprocessableEntity:
+			return fmt.Errorf("unprocessable request: %s", extractErrorMessage(data))
 		case http.StatusTooManyRequests:
 			return fmt.Errorf("rate limit exceeded: please try again later")
 		default:
