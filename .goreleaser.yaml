@@ -35,6 +35,8 @@ brews:
     license: MIT
     install: |
       bin.install "cast"
+    test: |
+      system "#{bin}/cast", "--help"
 
 changelog:
   sort: asc
