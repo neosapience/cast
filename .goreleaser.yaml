@@ -5,7 +5,8 @@ before:
     - go mod tidy
 
 builds:
-  - env:
+  - id: cast
+    env:
       - CGO_ENABLED=0
     goos:
       - linux
@@ -16,7 +17,8 @@ builds:
       - arm64
 
 archives:
-  - formats:
+  - id: cast
+    formats:
       - tar.gz
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
     format_overrides:
@@ -24,19 +26,34 @@ archives:
         formats:
           - zip
 
-brews:
+notarize:
+  macos:
+    - enabled: "true"
+      ids:
+        - cast
+      sign:
+        certificate: "{{ .Env.MACOS_SIGN_P12 }}"
+        password: "{{ .Env.MACOS_SIGN_PASSWORD }}"
+      notarize:
+        issuer_id: "{{ .Env.MACOS_NOTARY_ISSUER_ID }}"
+        key_id: "{{ .Env.MACOS_NOTARY_KEY_ID }}"
+        key: "{{ .Env.MACOS_NOTARY_KEY }}"
+        wait: true
+        timeout: 20m
+
+homebrew_casks:
   - name: cast
+    ids:
+      - cast
+    binaries:
+      - cast
     repository:
       owner: neosapience
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Casks
     homepage: https://github.com/neosapience/cast
     description: Typecast Text-to-Speech CLI
-    license: MIT
-    install: |
-      bin.install "cast"
-    test: |
-      system "#{bin}/cast", "--help"
 
 changelog:
   sort: asc
