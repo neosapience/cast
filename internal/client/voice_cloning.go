@@ -96,7 +96,6 @@ func (c *Client) CloneVoice(req CloneVoiceRequest) (*ClonedVoice, error) {
 		return nil, err
 	}
 	httpReq.Header.Set("Content-Type", writer.FormDataContentType())
-	httpReq.Header.Set("X-API-KEY", c.apiKey)
 
 	data, err := c.do(httpReq)
 	if err != nil {

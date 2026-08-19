@@ -10,6 +10,8 @@ import (
 )
 
 func TestCloneVoice_SendsMultipartRequest(t *testing.T) {
+	t.Setenv("TYPECAST_INTEGRATION_SOURCE", "skill")
+	t.Setenv("TYPECAST_GENERATED_BY", "codex")
 	audioPath := writeTempAudio(t, "sample.wav", testWAVBytes())
 
 	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
@@ -21,6 +23,9 @@ func TestCloneVoice_SendsMultipartRequest(t *testing.T) {
 		}
 		if got := r.Header.Get("X-API-KEY"); got != "test-api-key" {
 			t.Errorf("expected API key header, got %q", got)
+		}
+		if got := r.Header.Get("User-Agent"); !strings.HasSuffix(got, " typecast-integration/1 (source=skill; generated_by=codex)") {
+			t.Errorf("unexpected User-Agent: %q", got)
 		}
 		if !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
 			t.Errorf("expected multipart content type, got %q", r.Header.Get("Content-Type"))

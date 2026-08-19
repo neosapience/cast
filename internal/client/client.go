@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"runtime"
+	"strings"
 )
 
 type apiErrorResponse struct {
@@ -21,15 +24,17 @@ func extractErrorMessage(data []byte) string {
 }
 
 type Client struct {
-	apiKey     string
-	baseURL    string
-	httpClient *http.Client
+	apiKey      string
+	baseURL     string
+	httpClient  *http.Client
+	attribution string
 }
 
 func New(apiKey string) *Client {
 	return &Client{
-		apiKey:  apiKey,
-		baseURL: DefaultBaseURL,
+		apiKey:      apiKey,
+		baseURL:     DefaultBaseURL,
+		attribution: attributionFromEnv(),
 		httpClient: &http.Client{
 			Timeout: DefaultHTTPTimeout,
 		},
@@ -38,8 +43,9 @@ func New(apiKey string) *Client {
 
 func NewWithBaseURL(apiKey, baseURL string) *Client {
 	return &Client{
-		apiKey:  apiKey,
-		baseURL: baseURL,
+		apiKey:      apiKey,
+		baseURL:     baseURL,
+		attribution: attributionFromEnv(),
 		httpClient: &http.Client{
 			Timeout: DefaultHTTPTimeout,
 		},
@@ -58,7 +64,6 @@ func (c *Client) post(path string, body any) ([]byte, error) {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-API-KEY", c.apiKey)
 
 	return c.do(req)
 }
@@ -69,8 +74,6 @@ func (c *Client) get(path string) ([]byte, error) {
 		return nil, err
 	}
 
-	req.Header.Set("X-API-KEY", c.apiKey)
-
 	return c.do(req)
 }
 
@@ -80,12 +83,11 @@ func (c *Client) delete(path string) ([]byte, error) {
 		return nil, err
 	}
 
-	req.Header.Set("X-API-KEY", c.apiKey)
-
 	return c.do(req)
 }
 
 func (c *Client) do(req *http.Request) ([]byte, error) {
+	c.setHeaders(req)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -120,4 +122,73 @@ func (c *Client) do(req *http.Request) ([]byte, error) {
 	}
 
 	return data, nil
+}
+
+func (c *Client) setHeaders(req *http.Request) {
+	base := "custom"
+	if strings.EqualFold(strings.TrimRight(c.baseURL, "/"), DefaultBaseURL) {
+		base = "default"
+	}
+	req.Header.Set("X-API-KEY", c.apiKey)
+	req.Header.Set(
+		"User-Agent",
+		fmt.Sprintf(
+			"typecast-cli/%s Go/%s net-http (base=%s; os=%s; arch=%s; platform=cli)",
+			Version,
+			strings.TrimPrefix(runtime.Version(), "go"),
+			base,
+			normalizedOS(runtime.GOOS),
+			normalizedArch(runtime.GOARCH),
+		)+c.attribution,
+	)
+}
+
+func attributionSuffix(source, generatedBy string) string {
+	if source != "llms" && source != "skill" || !validGeneratedBy(generatedBy) {
+		return ""
+	}
+	return fmt.Sprintf(" typecast-integration/1 (source=%s; generated_by=%s)", source, generatedBy)
+}
+
+func attributionFromEnv() string {
+	return attributionSuffix(
+		os.Getenv("TYPECAST_INTEGRATION_SOURCE"),
+		os.Getenv("TYPECAST_GENERATED_BY"),
+	)
+}
+
+func validGeneratedBy(value string) bool {
+	if len(value) == 0 || len(value) > 32 {
+		return false
+	}
+	for i, char := range value {
+		if char >= 'a' && char <= 'z' || char >= '0' && char <= '9' || i > 0 && (char == '.' || char == '_' || char == '-') {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+func normalizedOS(value string) string {
+	if value == "darwin" {
+		return "macos"
+	}
+	if value == "" {
+		return "unknown"
+	}
+	return value
+}
+
+func normalizedArch(value string) string {
+	switch value {
+	case "amd64":
+		return "x64"
+	case "386":
+		return "x86"
+	case "":
+		return "unknown"
+	default:
+		return value
+	}
 }

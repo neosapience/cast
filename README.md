@@ -413,3 +413,17 @@ Any option can be set via environment variable using the `TYPECAST_` prefix:
 | `TYPECAST_TARGET_LUFS` | `--target-lufs` |
 | `TYPECAST_PITCH` | `--pitch` |
 | `TYPECAST_TEMPO` | `--tempo` |
+| `TYPECAST_INTEGRATION_SOURCE` | Integration guide source: `llms` or `skill` |
+| `TYPECAST_GENERATED_BY` | Coding-agent ID, e.g. `codex` or `claude-code` |
+
+Set both attribution variables in generated scripts so subsequent runs retain
+which guide and coding agent created the Typecast integration:
+
+```bash
+TYPECAST_INTEGRATION_SOURCE=skill \
+TYPECAST_GENERATED_BY=codex \
+cast "Hello" --out hello.wav
+```
+
+Cast keeps its own `typecast-cli/<version>` User-Agent and appends the
+attribution suffix. Invalid or incomplete attribution values are omitted.

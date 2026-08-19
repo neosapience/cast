@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -151,6 +152,8 @@ func TestTextToSpeech_SendsOptionalFields(t *testing.T) {
 }
 
 func TestTextToSpeechStream_Success(t *testing.T) {
+	t.Setenv("TYPECAST_INTEGRATION_SOURCE", "skill")
+	t.Setenv("TYPECAST_GENERATED_BY", "codex")
 	// Server sends a known body in one write; the client should deliver all bytes via onChunk.
 	want := bytes.Repeat([]byte("ABCD"), 4096) // 16KB to exercise multiple reads
 	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
@@ -159,6 +162,9 @@ func TestTextToSpeechStream_Success(t *testing.T) {
 		}
 		if r.Method != http.MethodPost {
 			t.Errorf("expected POST, got %s", r.Method)
+		}
+		if got := r.Header.Get("User-Agent"); !strings.HasSuffix(got, " typecast-integration/1 (source=skill; generated_by=codex)") {
+			t.Errorf("unexpected User-Agent: %q", got)
 		}
 
 		var body TTSRequest

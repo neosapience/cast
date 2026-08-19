@@ -15,9 +15,12 @@ func newTestClient(t *testing.T, handler http.HandlerFunc) (*Client, *httptest.S
 }
 
 func TestDo_SendsAPIKeyHeader(t *testing.T) {
-	var gotKey string
+	t.Setenv("TYPECAST_INTEGRATION_SOURCE", "skill")
+	t.Setenv("TYPECAST_GENERATED_BY", "codex")
+	var gotKey, gotUserAgent string
 	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		gotKey = r.Header.Get("X-API-KEY")
+		gotUserAgent = r.Header.Get("User-Agent")
 		w.Write([]byte(`{}`))
 	})
 
@@ -25,6 +28,27 @@ func TestDo_SendsAPIKeyHeader(t *testing.T) {
 
 	if gotKey != "test-api-key" {
 		t.Errorf("expected X-API-KEY = %q, got %q", "test-api-key", gotKey)
+	}
+	if !strings.HasPrefix(gotUserAgent, "typecast-cli/1.0.6 Go/") ||
+		!strings.Contains(gotUserAgent, " net-http (base=custom;") ||
+		!strings.HasSuffix(gotUserAgent, " typecast-integration/1 (source=skill; generated_by=codex)") {
+		t.Errorf("unexpected User-Agent: %q", gotUserAgent)
+	}
+}
+
+func TestAttributionSuffix_ValidatesBoundary(t *testing.T) {
+	generatedBy := strings.Repeat("a", 32)
+	if got := attributionSuffix("skill", generatedBy); !strings.Contains(got, generatedBy) {
+		t.Fatalf("expected 32-character generated_by token, got %q", got)
+	}
+	for _, got := range []string{
+		attributionSuffix("other", "codex"),
+		attributionSuffix("skill", "Codex"),
+		attributionSuffix("skill", generatedBy+"a"),
+	} {
+		if got != "" {
+			t.Fatalf("expected invalid attribution to be omitted, got %q", got)
+		}
 	}
 }
 

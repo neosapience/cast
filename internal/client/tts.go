@@ -54,7 +54,7 @@ func (c *Client) TextToSpeechStream(req TTSRequest, onChunk func([]byte) error) 
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("X-API-KEY", c.apiKey)
+	c.setHeaders(httpReq)
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
