@@ -29,7 +29,7 @@ func TestDo_SendsAPIKeyHeader(t *testing.T) {
 	if gotKey != "test-api-key" {
 		t.Errorf("expected X-API-KEY = %q, got %q", "test-api-key", gotKey)
 	}
-	if !strings.HasPrefix(gotUserAgent, "typecast-cli/1.0.6 Go/") ||
+	if !strings.HasPrefix(gotUserAgent, "typecast-cli/1.0.7 Go/") ||
 		!strings.Contains(gotUserAgent, " net-http (base=custom;") ||
 		!strings.HasSuffix(gotUserAgent, " typecast-integration/1 (source=skill; generated_by=codex)") {
 		t.Errorf("unexpected User-Agent: %q", gotUserAgent)
@@ -40,6 +40,11 @@ func TestAttributionSuffix_ValidatesBoundary(t *testing.T) {
 	generatedBy := strings.Repeat("a", 32)
 	if got := attributionSuffix("skill", generatedBy); !strings.Contains(got, generatedBy) {
 		t.Fatalf("expected 32-character generated_by token, got %q", got)
+	}
+	for _, source := range []string{"api-page", "api-docs"} {
+		if got := attributionSuffix(source, "codex"); !strings.Contains(got, "source="+source) {
+			t.Fatalf("expected %s attribution, got %q", source, got)
+		}
 	}
 	for _, got := range []string{
 		attributionSuffix("other", "codex"),

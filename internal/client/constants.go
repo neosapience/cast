@@ -9,4 +9,4 @@ const (
 
 // Version is the Cast CLI version reported in User-Agent.
 // Release builds override it through GoReleaser ldflags.
-var Version = "1.0.6"
+var Version = "1.0.7"

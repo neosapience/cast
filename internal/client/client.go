@@ -144,7 +144,7 @@ func (c *Client) setHeaders(req *http.Request) {
 }
 
 func attributionSuffix(source, generatedBy string) string {
-	if source != "llms" && source != "skill" || !validGeneratedBy(generatedBy) {
+	if source != "llms" && source != "skill" && source != "api-page" && source != "api-docs" || !validGeneratedBy(generatedBy) {
 		return ""
 	}
 	return fmt.Sprintf(" typecast-integration/1 (source=%s; generated_by=%s)", source, generatedBy)
