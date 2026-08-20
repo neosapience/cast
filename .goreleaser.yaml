@@ -26,21 +26,6 @@ archives:
         formats:
           - zip
 
-notarize:
-  macos:
-    - enabled: "true"
-      ids:
-        - cast
-      sign:
-        certificate: "{{ .Env.MACOS_SIGN_P12 }}"
-        password: "{{ .Env.MACOS_SIGN_PASSWORD }}"
-      notarize:
-        issuer_id: "{{ .Env.MACOS_NOTARY_ISSUER_ID }}"
-        key_id: "{{ .Env.MACOS_NOTARY_KEY_ID }}"
-        key: "{{ .Env.MACOS_NOTARY_KEY }}"
-        wait: true
-        timeout: 20m
-
 homebrew_casks:
   - name: cast
     ids:
@@ -52,6 +37,12 @@ homebrew_casks:
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     directory: Casks
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/cast"]
+          end
     homepage: https://github.com/neosapience/cast
     description: Typecast Text-to-Speech CLI
 
