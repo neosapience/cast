@@ -118,6 +118,44 @@ func TestCloneVoice_ValidatesInputs(t *testing.T) {
 	}
 }
 
+func TestProfessionalCloneAndStatus(t *testing.T) {
+	audioPath := writeTempAudio(t, "professional.wav", testWAVBytes())
+	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v1/custom-voices/professional-clone":
+			if r.Method != http.MethodPost {
+				t.Errorf("expected POST, got %s", r.Method)
+			}
+			if err := r.ParseMultipartForm(MaxCloneAudioSize); err != nil {
+				t.Fatalf("ParseMultipartForm failed: %v", err)
+			}
+			if got := r.FormValue("language"); got != "eng" {
+				t.Errorf("language: want eng, got %q", got)
+			}
+			if _, _, err := r.FormFile("files"); err != nil {
+				t.Fatalf("missing files field: %v", err)
+			}
+			w.WriteHeader(http.StatusAccepted)
+			_ = json.NewEncoder(w).Encode(CustomVoice{VoiceID: "uc_pro_123", Name: "Professional", Status: "processing", Source: "professional"})
+		case "/v1/custom-voices/uc_pro_123":
+			_ = json.NewEncoder(w).Encode(CustomVoice{VoiceID: "uc_pro_123", Status: "completed", Source: "professional"})
+		default:
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+	})
+
+	voice, err := c.CreateProfessionalVoice(ProfessionalCloneRequest{
+		Name: "Professional", Language: "eng", Model: "ssfm-v30", AudioFilePath: audioPath,
+	})
+	if err != nil || voice.Status != "processing" || voice.VoiceID != "uc_pro_123" {
+		t.Fatalf("professional clone: %v, %#v", err, voice)
+	}
+	voice, err = c.GetCustomVoice(voice.VoiceID)
+	if err != nil || voice.Status != "completed" {
+		t.Fatalf("professional clone status: %v, %#v", err, voice)
+	}
+}
+
 func TestOpenCloneAudioFile_ValidatesFile(t *testing.T) {
 	dir := t.TempDir()
 	wav := writeTempAudio(t, "sample.wav", testWAVBytes())

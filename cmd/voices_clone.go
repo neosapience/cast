@@ -18,9 +18,24 @@ var voicesCloneCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name, _ := cmd.Flags().GetString("name")
 		model, _ := cmd.Flags().GetString("model")
+		professional, _ := cmd.Flags().GetBool("professional")
+		language, _ := cmd.Flags().GetString("language")
 		asJSON, _ := cmd.Flags().GetBool("json")
 
 		c := newTypecastClient()
+		if professional {
+			voice, err := c.CreateProfessionalVoice(client.ProfessionalCloneRequest{
+				Name: name, Language: language, Model: model, AudioFilePath: args[0],
+			})
+			if err != nil {
+				return err
+			}
+			if asJSON {
+				return json.NewEncoder(os.Stdout).Encode(voice)
+			}
+			fmt.Println(voice.VoiceID)
+			return nil
+		}
 		voice, err := c.CloneVoice(client.CloneVoiceRequest{
 			Name:          name,
 			Model:         model,
@@ -38,6 +53,19 @@ var voicesCloneCmd = &cobra.Command{
 
 		fmt.Println(voice.VoiceID)
 		return nil
+	},
+}
+
+var voicesCloneStatusCmd = &cobra.Command{
+	Use:   "status <voice_id>",
+	Short: "Get professional clone status",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		voice, err := newTypecastClient().GetCustomVoice(args[0])
+		if err != nil {
+			return err
+		}
+		return json.NewEncoder(os.Stdout).Encode(voice)
 	},
 }
 
@@ -73,8 +101,11 @@ func init() {
 	voicesCloneCmd.Flags().String("name", "", "Display name for the cloned voice (1-30 characters)")
 	_ = voicesCloneCmd.MarkFlagRequired("name")
 	voicesCloneCmd.Flags().String("model", defaultModel, "Voice cloning model (ssfm-v30)")
+	voicesCloneCmd.Flags().Bool("professional", false, "Create an asynchronous professional clone")
+	voicesCloneCmd.Flags().String("language", "", "Language code required for professional cloning (for example: eng, kor)")
 	voicesCloneCmd.Flags().Bool("json", false, "Output clone response as JSON")
 
+	voicesCloneCmd.AddCommand(voicesCloneStatusCmd)
 	voicesCmd.AddCommand(voicesCloneCmd)
 	voicesCmd.AddCommand(voicesDeleteCmd)
 }

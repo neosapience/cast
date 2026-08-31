@@ -23,6 +23,13 @@ type CloneVoiceRequest struct {
 	AudioFilePath string
 }
 
+type ProfessionalCloneRequest struct {
+	Name          string
+	Language      string
+	Model         string
+	AudioFilePath string
+}
+
 type ClonedVoice struct {
 	VoiceID         string `json:"voice_id"`
 	ClonedVoiceID   string `json:"cloned_voice_id"`
@@ -32,6 +39,17 @@ type ClonedVoice struct {
 	FileSize        int64  `json:"file_size,omitempty"`
 	NextStepVoiceID string `json:"next_step_voice_id"`
 	NextStepModel   string `json:"next_step_model"`
+}
+
+// CustomVoice represents an asynchronous professional clone.
+type CustomVoice struct {
+	VoiceID   string `json:"voice_id"`
+	Name      string `json:"name"`
+	Model     string `json:"model"`
+	Source    string `json:"source"`
+	Status    string `json:"status"`
+	Error     string `json:"error,omitempty"`
+	CreatedAt string `json:"created_at,omitempty"`
 }
 
 type cloneVoicePayload struct {
@@ -107,6 +125,74 @@ func (c *Client) CloneVoice(req CloneVoiceRequest) (*ClonedVoice, error) {
 		return nil, err
 	}
 	return voice, nil
+}
+
+// CreateProfessionalVoice starts an asynchronous professional custom-voice clone.
+func (c *Client) CreateProfessionalVoice(req ProfessionalCloneRequest) (*CustomVoice, error) {
+	if n := utf8.RuneCountInString(req.Name); n < 1 || n > 30 {
+		return nil, fmt.Errorf("voice name must be between 1 and 30 characters, got %d", n)
+	}
+	if req.Language == "" {
+		return nil, fmt.Errorf("language is required for professional voice cloning")
+	}
+	if req.Model == "" {
+		req.Model = "ssfm-v30"
+	}
+
+	audioFile, contentType, _, err := openCloneAudioFile(req.AudioFilePath)
+	if err != nil {
+		return nil, err
+	}
+	defer audioFile.Close()
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	for key, value := range map[string]string{"name": req.Name, "language": req.Language, "model": req.Model} {
+		if err := writer.WriteField(key, value); err != nil {
+			return nil, err
+		}
+	}
+	part, err := writer.CreatePart(textproto.MIMEHeader{
+		"Content-Disposition": []string{fmt.Sprintf(`form-data; name="files"; filename="%s"`, escapeQuotes(filepath.Base(req.AudioFilePath)))},
+		"Content-Type":        []string{contentType},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if _, err := io.Copy(part, audioFile); err != nil {
+		return nil, err
+	}
+	if err := writer.Close(); err != nil {
+		return nil, err
+	}
+
+	httpReq, err := http.NewRequest("POST", c.baseURL+"/v1/custom-voices/professional-clone", body)
+	if err != nil {
+		return nil, err
+	}
+	httpReq.Header.Set("Content-Type", writer.FormDataContentType())
+	data, err := c.do(httpReq)
+	if err != nil {
+		return nil, err
+	}
+	var voice CustomVoice
+	if err := json.Unmarshal(data, &voice); err != nil {
+		return nil, err
+	}
+	return &voice, nil
+}
+
+// GetCustomVoice returns the current status of a custom voice.
+func (c *Client) GetCustomVoice(voiceID string) (*CustomVoice, error) {
+	data, err := c.get("/v1/custom-voices/" + url.PathEscape(voiceID))
+	if err != nil {
+		return nil, err
+	}
+	var voice CustomVoice
+	if err := json.Unmarshal(data, &voice); err != nil {
+		return nil, err
+	}
+	return &voice, nil
 }
 
 func (c *Client) DeleteClonedVoice(voiceID string) error {

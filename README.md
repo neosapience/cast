@@ -192,7 +192,7 @@ cast voices list --use-case Audiobook --gender female
 cast config set voice-id tc_xxx
 ```
 
-### Quick Voice Cloning
+### Voice Cloning
 
 Clone a custom voice from a WAV or MP3 sample, use the returned `uc_` voice ID
 for TTS, then delete the clone when you are done.
@@ -227,6 +227,18 @@ cast voices clone sample.mp3 --name "Review Clone" --json
 
 Constraints: clone names must be 1-30 characters, the model is `ssfm-v30`, and
 audio samples must be WAV or MP3 files no larger than 25 MB.
+
+### Professional Voice Cloning
+
+Professional cloning is asynchronous. Submit a WAV or MP3 sample with its
+language, then query the returned `uc_` voice ID until its status is
+`completed` or `failed`.
+
+```bash
+voice_id=$(cast voices clone sample.wav --name "My Professional Voice" \
+  --professional --language eng)
+cast voices clone status "$voice_id"
+```
 
 ### Timestamps
 
