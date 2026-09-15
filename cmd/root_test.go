@@ -460,6 +460,10 @@ func outputField(out interface{}, field string) string {
 // Cobra's pflag state is global, so values persist across Execute() calls.
 func resetFlags() {
 	f := rootCmd.Flags()
+	if flag := f.Lookup("remove-silence-ms"); flag != nil {
+		flag.Value.Set("")
+		flag.Changed = false
+	}
 	if flag := f.Lookup("volume"); flag != nil {
 		flag.Value.Set("-1")
 		flag.Changed = false

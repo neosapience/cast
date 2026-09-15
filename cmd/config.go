@@ -73,6 +73,7 @@ var configKeys = map[string]string{
 	"emotion-intensity": "emotion_intensity",
 	"volume":            "volume",
 	"target-lufs":       "target_lufs",
+	"remove-silence-ms": "remove_silence_ms",
 	"pitch":             "pitch",
 	"tempo":             "tempo",
 	"format":            "format",
