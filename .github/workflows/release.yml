@@ -28,3 +28,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
+      - name: Normalize and publish Homebrew formula
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          ruby scripts/normalize_homebrew_formula.rb --self-test
+          ruby scripts/normalize_homebrew_formula.rb dist/homebrew/cast.rb
+          formula_sha=$(gh api repos/neosapience/homebrew-tap/contents/cast.rb --jq .sha)
+          gh api --method PUT repos/neosapience/homebrew-tap/contents/cast.rb \
+            -f branch=main -f sha="$formula_sha" \
+            -f message="Brew formula update for cast $RELEASE_TAG" \
+            -f content="$(base64 -w 0 dist/homebrew/cast.rb)" --silent
