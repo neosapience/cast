@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -50,7 +51,7 @@ func TestRemoveSilenceOption(t *testing.T) {
 		if (err == nil) != valid {
 			t.Fatal(raw, err)
 		}
-		if valid && (req.Output == nil || req.Output.RemoveSilenceMS == nil) {
+		if valid && (req.Output == nil || req.Output.RemoveSilenceMS == nil || strconv.Itoa(*req.Output.RemoveSilenceMS) != raw) {
 			t.Fatal(raw, req)
 		}
 	}
