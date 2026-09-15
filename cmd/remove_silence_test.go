@@ -29,6 +29,11 @@ func TestRemoveSilenceEnvironment(t *testing.T) {
 }
 
 func TestRemoveSilenceOption(t *testing.T) {
+	for key := range configKeys {
+		if !strings.Contains(configSetCmd.Long, key) {
+			t.Fatalf("config help missing %s", key)
+		}
+	}
 	defer resetFlags()
 	resetFlags()
 	req, err := buildTTSRequest(rootCmd, "test")

@@ -89,7 +89,7 @@ var configSetCmd = &cobra.Command{
 	Use:   "set <key> <value>",
 	Short: "Set a default value",
 	Long: "Set a default value in ~/.typecast/config.yaml\n\nAvailable keys: " +
-		"voice-id, model, language, emotion, emotion-preset, emotion-intensity, volume, target-lufs, pitch, tempo, format, base-url",
+		strings.Join(availableKeys(), ", "),
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		key, value := args[0], args[1]
