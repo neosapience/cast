@@ -28,6 +28,8 @@ archives:
 
 brews:
   - name: cast
+    # Normalize the generated formula before the release workflow publishes it.
+    skip_upload: true
     repository:
       owner: neosapience
       name: homebrew-tap
@@ -38,7 +40,7 @@ brews:
     install: |
       bin.install "cast"
     test: |
-      system "#{bin}/cast", "--help"
+      system bin/"cast", "--help"
 
 changelog:
   sort: asc
