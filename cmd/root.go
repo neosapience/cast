@@ -268,6 +268,16 @@ func buildTTSRequest(cmd *cobra.Command, text string) (client.TTSRequest, error)
 	}
 
 	flags := cmd.Flags()
+	var removeSilenceMS *int
+	_, silenceEnvSet := os.LookupEnv("TYPECAST_REMOVE_SILENCE_MS")
+	if flags.Changed("remove-silence-ms") || silenceEnvSet || viper.InConfig("remove_silence_ms") {
+		raw := viper.GetString("remove_silence_ms")
+		ms, err := strconv.Atoi(raw)
+		if err != nil || ms < 0 || ms > 1000 {
+			return client.TTSRequest{}, fmt.Errorf("remove-silence-ms must be an integer between 0 and 1000, got %q", raw)
+		}
+		removeSilenceMS = &ms
+	}
 	voiceID := viper.GetString("voice_id")
 	model := viper.GetString("model")
 	language := viper.GetString("language")
@@ -367,6 +377,10 @@ func buildTTSRequest(cmd *cobra.Command, text string) (client.TTSRequest, error)
 
 	out := &client.TTSOutput{}
 	hasOutput := false
+	if removeSilenceMS != nil {
+		out.RemoveSilenceMS = removeSilenceMS
+		hasOutput = true
+	}
 	if targetLUFSSet {
 		out.TargetLUFS = &targetLUFS
 		hasOutput = true
@@ -445,6 +459,8 @@ func init() {
 	viper.BindPFlag("stream", f.Lookup("stream"))
 	f.Float64("target-lufs", 0, "Target loudness in LUFS (-70 to 0, mutually exclusive with --volume)")
 	viper.BindPFlag("target_lufs", f.Lookup("target-lufs"))
+	f.String("remove-silence-ms", "", "Remaining detected silence in ms (integer 0–1000; 0 removes silence; omit to disable)")
+	viper.BindPFlag("remove_silence_ms", f.Lookup("remove-silence-ms"))
 	f.String("timestamp-out", "", "Save timestamp alignment output to a file (json, srt, or vtt)")
 	viper.BindPFlag("timestamp_out", f.Lookup("timestamp-out"))
 	f.String("timestamp-format", "", "Timestamp output format (json, srt, vtt; inferred from --timestamp-out when omitted)")

@@ -27,11 +27,12 @@ type TTSPrompt struct {
 }
 
 type TTSOutput struct {
-	Volume      *int     `json:"volume,omitempty"`
-	AudioPitch  *int     `json:"audio_pitch,omitempty"`
-	AudioTempo  *float64 `json:"audio_tempo,omitempty"`
-	AudioFormat string   `json:"audio_format,omitempty"`
-	TargetLUFS  *float64 `json:"target_lufs,omitempty"`
+	RemoveSilenceMS *int     `json:"remove_silence_ms,omitempty"`
+	Volume          *int     `json:"volume,omitempty"`
+	AudioPitch      *int     `json:"audio_pitch,omitempty"`
+	AudioTempo      *float64 `json:"audio_tempo,omitempty"`
+	AudioFormat     string   `json:"audio_format,omitempty"`
+	TargetLUFS      *float64 `json:"target_lufs,omitempty"`
 }
 
 func (c *Client) TextToSpeech(req TTSRequest) ([]byte, error) {
