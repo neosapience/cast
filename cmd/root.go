@@ -290,7 +290,6 @@ func buildTTSRequest(cmd *cobra.Command, text string) (client.TTSRequest, error)
 	pitch := viper.GetInt("pitch")
 	tempo := viper.GetFloat64("tempo")
 	format := viper.GetString("format")
-	seed := viper.GetInt("seed")
 	targetLUFS := viper.GetFloat64("target_lufs")
 	targetLUFSEnvValue, targetLUFSEnvSet := os.LookupEnv("TYPECAST_TARGET_LUFS")
 	if targetLUFSEnvSet && !flags.Changed("target-lufs") {
@@ -405,10 +404,6 @@ func buildTTSRequest(cmd *cobra.Command, text string) (client.TTSRequest, error)
 		req.Output = out
 	}
 
-	if seed >= 0 {
-		req.Seed = &seed
-	}
-
 	return req, nil
 }
 
@@ -453,8 +448,6 @@ func init() {
 	viper.BindPFlag("tempo", f.Lookup("tempo"))
 	f.String("format", "", "Output format (wav, mp3)")
 	viper.BindPFlag("format", f.Lookup("format"))
-	f.Int("seed", -1, "Random seed for reproducible output")
-	viper.BindPFlag("seed", f.Lookup("seed"))
 	f.Bool("stream", false, "Stream audio chunks in real-time")
 	viper.BindPFlag("stream", f.Lookup("stream"))
 	f.Float64("target-lufs", 0, "Target loudness in LUFS (-70 to 0, mutually exclusive with --volume)")

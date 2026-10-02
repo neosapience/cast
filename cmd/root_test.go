@@ -162,16 +162,24 @@ func TestBuildTTSRequest_AudioParams(t *testing.T) {
 	}
 }
 
-func TestBuildTTSRequest_Seed(t *testing.T) {
+func TestBuildTTSRequest_SeedRemoved(t *testing.T) {
 	resetFlags()
-	rootCmd.Flags().Set("seed", "42")
-
+	if rootCmd.Flags().Lookup("seed") != nil {
+		t.Fatal("seed flag must not be registered")
+	}
+	t.Setenv("TYPECAST_SEED", "42")
+	viper.Set("seed", 42)
+	defer viper.Set("seed", nil)
 	req, err := buildTTSRequest(rootCmd, "hello")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatal(err)
 	}
-	if req.Seed == nil || *req.Seed != 42 {
-		t.Errorf("seed: want 42, got %v", req.Seed)
+	encoded, err := json.Marshal(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), `"seed"`) {
+		t.Fatalf("unexpected seed in request: %s", encoded)
 	}
 }
 
@@ -485,10 +493,6 @@ func resetFlags() {
 	f.Set("prev-text", "")
 	f.Set("next-text", "")
 	f.Set("model", defaultModel)
-	if flag := f.Lookup("seed"); flag != nil {
-		flag.Value.Set("-1")
-		flag.Changed = false
-	}
 	f.Set("out", "")
 	f.Set("format", "")
 	f.Set("language", "")

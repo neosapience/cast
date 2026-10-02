@@ -158,5 +158,4 @@ func resetSubscriptionTestConfig() {
 	viper.Set("volume", -1)
 	viper.Set("pitch", 0)
 	viper.Set("tempo", -1)
-	viper.Set("seed", -1)
 }

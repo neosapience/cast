@@ -79,7 +79,6 @@ cast "Hello, world!" --out hello.mp3 --format mp3
 | `--pitch` | Pitch in semitones (–12 to +12) | 0 |
 | `--tempo` | Tempo multiplier (0.5–2.0) | 1.0 |
 | `--format` | Output format (`wav`, `mp3`) | `wav` |
-| `--seed` | Random seed for reproducible output | |
 | `--out` | Save to file instead of playing | |
 
 ### Models
@@ -370,13 +369,6 @@ cast "He watched the train disappear into the fog." --emotion preset --emotion-p
 cast "I can't believe we actually made it!" --emotion smart \
   --prev-text "We've been working on this for three years." \
   --next-text "Let's celebrate tonight!"
-```
-
-**Reproducible output with a fixed seed:**
-```bash
-cast "Hello, world!" --seed 42 --out hello.wav
-# Running again with the same seed produces identical audio
-cast "Hello, world!" --seed 42 --out hello2.wav
 ```
 
 **Use a different language:**
