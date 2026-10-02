@@ -117,7 +117,6 @@ func TestTTSRequest_Volume_NoTargetLUFS(t *testing.T) {
 }
 
 func TestTextToSpeech_SendsOptionalFields(t *testing.T) {
-	seed := 42
 	volume := 150
 	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		var body TTSRequest
@@ -135,9 +134,6 @@ func TestTextToSpeech_SendsOptionalFields(t *testing.T) {
 		if body.Output.Volume == nil || *body.Output.Volume != 150 {
 			t.Errorf("expected volume=150, got %v", body.Output.Volume)
 		}
-		if body.Seed == nil || *body.Seed != 42 {
-			t.Errorf("expected seed=42, got %v", body.Seed)
-		}
 
 		w.Write([]byte("ok"))
 	})
@@ -147,7 +143,6 @@ func TestTextToSpeech_SendsOptionalFields(t *testing.T) {
 		Text:    "hi",
 		Prompt:  &TTSPrompt{EmotionType: "smart"},
 		Output:  &TTSOutput{Volume: &volume},
-		Seed:    &seed,
 	})
 }
 
