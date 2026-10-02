@@ -34,7 +34,6 @@ type TTSRequestWithTimestamps struct {
 	Language string     `json:"language,omitempty"`
 	Prompt   *TTSPrompt `json:"prompt,omitempty"`
 	Output   *TTSOutput `json:"output,omitempty"`
-	Seed     *int       `json:"seed,omitempty"`
 }
 
 // TTSWithTimestampsResponse is the response payload from

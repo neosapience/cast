@@ -15,7 +15,6 @@ type TTSRequest struct {
 	Language string     `json:"language,omitempty"`
 	Prompt   *TTSPrompt `json:"prompt,omitempty"`
 	Output   *TTSOutput `json:"output,omitempty"`
-	Seed     *int       `json:"seed,omitempty"`
 }
 
 type TTSPrompt struct {

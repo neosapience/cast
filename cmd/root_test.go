@@ -235,9 +235,6 @@ func TestBuildTTSRequest_OutputNilWhenDefaults(t *testing.T) {
 	if req.Prompt != nil {
 		t.Errorf("expected prompt to be nil when no emotion set, got %+v", req.Prompt)
 	}
-	if req.Seed != nil {
-		t.Errorf("expected seed to be nil when not set, got %v", req.Seed)
-	}
 }
 
 func TestRootCmd_OutFileSaved(t *testing.T) {
