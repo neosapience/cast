@@ -123,10 +123,10 @@ func (r *TTSWithTimestampsResponse) SaveAudio(path string) error {
 	return os.WriteFile(path, b, 0644)
 }
 
-// ToSRT returns SRT-formatted captions. Returns an error if both word and
-// character arrays are missing or if the joined text yields no non-empty cues.
-func (r *TTSWithTimestampsResponse) ToSRT() (string, error) {
-	cues, err := r.cues()
+// ToSRT returns captions using sentence grouping or one word/char per cue.
+// Returns an error if the required alignment is missing or all cues are empty.
+func (r *TTSWithTimestampsResponse) ToSRT(unit string) (string, error) {
+	cues, err := r.cues(unit)
 	if err != nil {
 		return "", err
 	}
@@ -144,8 +144,8 @@ func (r *TTSWithTimestampsResponse) ToSRT() (string, error) {
 }
 
 // ToVTT returns WebVTT-formatted captions.
-func (r *TTSWithTimestampsResponse) ToVTT() (string, error) {
-	cues, err := r.cues()
+func (r *TTSWithTimestampsResponse) ToVTT(unit string) (string, error) {
+	cues, err := r.cues(unit)
 	if err != nil {
 		return "", err
 	}
@@ -162,7 +162,7 @@ func (r *TTSWithTimestampsResponse) ToVTT() (string, error) {
 	return sb.String(), nil
 }
 
-// --- caption helpers (must match Python/JS/Go SDK byte-for-byte) ---
+// --- sentence caption grouping (must match Python/JS/Go SDK byte-for-byte) ---
 
 const (
 	maxCaptionSeconds = 7.0
@@ -272,7 +272,33 @@ func groupIntoCues(segs []captionSegment, wordMode bool) []captionCue {
 	return cues
 }
 
-func (r *TTSWithTimestampsResponse) cues() ([]captionCue, error) {
+func (r *TTSWithTimestampsResponse) cues(unit string) ([]captionCue, error) {
+	if unit == "word" || unit == "char" {
+		cues := []captionCue{}
+		if unit == "word" {
+			if len(r.Words) == 0 {
+				return nil, errors.New("word captions require word alignment segments")
+			}
+			for _, w := range r.Words {
+				if text := strings.TrimSpace(w.Text); text != "" {
+					cues = append(cues, captionCue{text, w.Start, w.End})
+				}
+			}
+		} else {
+			if len(r.Characters) == 0 {
+				return nil, errors.New("char captions require character alignment segments")
+			}
+			for _, ch := range r.Characters {
+				if text := strings.TrimSpace(ch.Text); text != "" {
+					cues = append(cues, captionCue{text, ch.Start, ch.End})
+				}
+			}
+		}
+		return cues, nil
+	}
+	if unit != "sentence" {
+		return nil, fmt.Errorf("unsupported caption unit %q", unit)
+	}
 	segs, wordMode, err := r.pickSegments()
 	if err != nil {
 		return nil, err
