@@ -507,6 +507,8 @@ func resetFlags() {
 	f.Set("timestamp-out", "")
 	f.Set("timestamp-format", "")
 	f.Set("timestamp-granularity", "")
+	f.Set("caption-unit", "sentence")
+	f.Lookup("caption-unit").Changed = false
 	viper.Set("format", "")
 	viper.Set("language", "")
 	viper.Set("stream", nil)
@@ -514,6 +516,7 @@ func resetFlags() {
 	viper.Set("timestamp_out", nil)
 	viper.Set("timestamp_format", nil)
 	viper.Set("timestamp_granularity", nil)
+	viper.Set("caption_unit", nil)
 }
 
 func TestRootCmd_TargetLufsFlag(t *testing.T) {
@@ -745,5 +748,84 @@ func TestRootCmd_EmotionValidation(t *testing.T) {
 				t.Errorf("want error containing %q, got %q", tc.errMsg, err.Error())
 			}
 		})
+	}
+}
+
+func TestRootCmd_CaptionUnit(t *testing.T) {
+	for _, tc := range []struct {
+		name, unit, format, granularity, wantGranularity, wantText string
+		missingChars, wantError, noRequest                         bool
+	}{
+		{name: "word srt", unit: "word", format: "srt", wantGranularity: "word", wantText: "1\n00:00:00,100 --> 00:00:00,400\nHi\n\n2\n00:00:00,600 --> 00:00:00,900\nthere.\n\n"},
+		{name: "char vtt with both", unit: "char", format: "vtt", granularity: "both", wantGranularity: "both", wantText: "WEBVTT\n\n00:00:00.100 --> 00:00:00.200\nH\n\n00:00:00.300 --> 00:00:00.400\ni\n\n"},
+		{name: "char overrides language default", unit: "char", format: "srt", wantGranularity: "char", wantText: "1\n00:00:00,100 --> 00:00:00,200\nH\n\n2\n00:00:00,300 --> 00:00:00,400\ni\n\n"},
+		{name: "invalid unit", unit: "line", format: "srt", wantError: true, noRequest: true},
+		{name: "json rejects word", unit: "word", format: "json", wantError: true, noRequest: true},
+		{name: "conflicting granularity", unit: "word", format: "srt", granularity: "char", wantError: true, noRequest: true},
+		{name: "missing characters", unit: "char", format: "srt", missingChars: true, wantGranularity: "char", wantError: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			resetFlags()
+			t.Cleanup(resetFlags)
+			calls := 0
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				calls++
+				if got := r.URL.Query().Get("granularity"); got != tc.wantGranularity {
+					t.Errorf("granularity: got %q, want %q", got, tc.wantGranularity)
+				}
+				response := map[string]any{
+					"audio": base64.StdEncoding.EncodeToString([]byte("audio")), "audio_format": "wav",
+					"words": []map[string]any{{"text": "Hi", "start": .1, "end": .4}, {"text": "there.", "start": .6, "end": .9}},
+				}
+				if !tc.missingChars {
+					response["characters"] = []map[string]any{{"text": "H", "start": .1, "end": .2}, {"text": " ", "start": .2, "end": .3}, {"text": "i", "start": .3, "end": .4}}
+				}
+				json.NewEncoder(w).Encode(response)
+			}))
+			defer srv.Close()
+			dir := t.TempDir()
+			audio, captions := filepath.Join(dir, "out.wav"), filepath.Join(dir, "captions."+tc.format)
+			for _, path := range []string{audio, captions} {
+				if err := os.WriteFile(path, []byte("existing"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			args := []string{"hello", "--base-url", srv.URL, "--out", audio, "--timestamp-out", captions, "--caption-unit", tc.unit}
+			if tc.granularity != "" {
+				args = append(args, "--timestamp-granularity", tc.granularity)
+			}
+			rootCmd.SetArgs(args)
+			err := rootCmd.Execute()
+			if (err != nil) != tc.wantError {
+				t.Fatalf("error: got %v, wantError %v", err, tc.wantError)
+			}
+			if tc.noRequest && calls != 0 {
+				t.Fatalf("invalid options made %d API calls", calls)
+			}
+			data, err := os.ReadFile(captions)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.wantError {
+				if string(data) != "existing" {
+					t.Errorf("caption file overwritten on error: %q", data)
+				}
+				audioData, err := os.ReadFile(audio)
+				if err != nil || string(audioData) != "existing" {
+					t.Errorf("audio file overwritten on error: %q, %v", audioData, err)
+				}
+			} else if string(data) != tc.wantText {
+				t.Errorf("captions: got %q, want %q", data, tc.wantText)
+			}
+		})
+	}
+}
+
+func TestRootCmd_CaptionUnitAloneRequestsTimestamps(t *testing.T) {
+	resetFlags()
+	t.Cleanup(resetFlags)
+	rootCmd.SetArgs([]string{"hello", "--caption-unit", "word"})
+	if err := rootCmd.Execute(); err == nil || !strings.Contains(err.Error(), "timestamp output requires") {
+		t.Fatalf("caption-unit must enter timestamp flow before any API call, got %v", err)
 	}
 }

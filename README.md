@@ -80,6 +80,7 @@ cast "Hello, world!" --out hello.mp3 --format mp3
 | `--tempo` | Tempo multiplier (0.5–2.0) | 1.0 |
 | `--format` | Output format (`wav`, `mp3`) | `wav` |
 | `--out` | Save to file instead of playing | |
+| `--caption-unit` | SRT/VTT cue unit (`sentence`, `word`, `char`) | `sentence` |
 
 ### Models
 
@@ -280,6 +281,24 @@ cast "Hello, world." \
   --timestamp-out hello.srt \
   --timestamp-granularity both
 ```
+
+For one word per subtitle cue, use:
+
+```bash
+cast "Hello world." --out hello.wav --timestamp-out hello.srt --caption-unit word
+```
+
+`--timestamp-granularity` selects API alignment data; `--caption-unit` selects
+SRT/VTT cue boundaries. The default `sentence` groups alignment into readable
+cues at sentence endings, 42 characters, or 7 seconds. `word` and `char` write
+one non-whitespace alignment segment per cue, preserving its timing. JSON
+always preserves raw alignment and rejects non-default caption units.
+
+Word/char captions automatically request the matching alignment when
+`--timestamp-granularity` is omitted. An explicit granularity must match the
+caption unit or be `both`; missing alignment is an error. For example, use
+`--caption-unit char --timestamp-granularity both` for character cues with both
+alignment arrays available.
 
 Resolution rules:
 

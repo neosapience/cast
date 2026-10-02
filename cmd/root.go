@@ -61,6 +61,7 @@ var rootCmd = &cobra.Command{
 		timestampsOut := viper.GetString("timestamp_out")
 		timestampsFormat := viper.GetString("timestamp_format")
 		granularity := viper.GetString("timestamp_granularity")
+		captionUnit := viper.GetString("caption_unit")
 
 		baseURL := viper.GetString("base_url")
 		var c *client.Client
@@ -70,12 +71,12 @@ var rootCmd = &cobra.Command{
 			c = client.New(viper.GetString("api_key"))
 		}
 
-		timestampsRequested := timestampsOut != "" || timestampsFormat != "" || granularity != ""
+		timestampsRequested := timestampsOut != "" || timestampsFormat != "" || granularity != "" || captionUnit != "sentence" || cmd.Flags().Changed("caption-unit")
 		if timestampsRequested {
 			if timestampsOut == "" && outFile == "" {
 				return fmt.Errorf("timestamp output requires --out or --timestamp-out")
 			}
-			return runTTSWithTimestamps(c, req, outFile, format, timestampsOut, timestampsFormat, granularity)
+			return runTTSWithTimestamps(c, req, outFile, format, timestampsOut, timestampsFormat, granularity, captionUnit)
 		}
 
 		stream := viper.GetBool("stream")
@@ -141,10 +142,26 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-func runTTSWithTimestamps(c *client.Client, req client.TTSRequest, outFile, audioFormat, timestampsOut, timestampsFormat, granularity string) error {
+func runTTSWithTimestamps(c *client.Client, req client.TTSRequest, outFile, audioFormat, timestampsOut, timestampsFormat, granularity, captionUnit string) error {
 	timestampsFormat, err := resolveTimestampsFormat(timestampsOut, timestampsFormat)
 	if err != nil {
 		return err
+	}
+
+	if captionUnit != "sentence" && captionUnit != "word" && captionUnit != "char" {
+		return fmt.Errorf("--caption-unit must be 'sentence', 'word', or 'char', got %q", captionUnit)
+	}
+	if captionUnit != "sentence" {
+		if timestampsFormat == "json" {
+			return fmt.Errorf("--caption-unit %s requires SRT or VTT output; JSON preserves raw alignment", captionUnit)
+		}
+		// Request the alignment needed for the chosen cues without overriding an explicit selection.
+		granularity = strings.ToLower(granularity)
+		if granularity == "" {
+			granularity = captionUnit
+		} else if granularity != captionUnit && granularity != "both" {
+			return fmt.Errorf("--caption-unit %s requires --timestamp-granularity %s or both", captionUnit, captionUnit)
+		}
 	}
 
 	// When --timestamp-out is omitted, derive it from the audio --out path by
@@ -162,7 +179,7 @@ func runTTSWithTimestamps(c *client.Client, req client.TTSRequest, outFile, audi
 		return err
 	}
 
-	if err := writeTimestampsOutput(resp, timestampsOut, timestampsFormat); err != nil {
+	if err := writeTimestampsOutput(resp, timestampsOut, timestampsFormat, captionUnit); err != nil {
 		return err
 	}
 	fmt.Fprintf(os.Stderr, "timestamps saved: %s\n", timestampsOut)
@@ -232,7 +249,7 @@ func resolveGranularity(language, granularity string) (string, error) {
 	}
 }
 
-func writeTimestampsOutput(resp *client.TTSWithTimestampsResponse, path, format string) error {
+func writeTimestampsOutput(resp *client.TTSWithTimestampsResponse, path, format, captionUnit string) error {
 	var data []byte
 	var err error
 	switch format {
@@ -243,11 +260,11 @@ func writeTimestampsOutput(resp *client.TTSWithTimestampsResponse, path, format 
 		}
 	case "srt":
 		var s string
-		s, err = resp.ToSRT()
+		s, err = resp.ToSRT(captionUnit)
 		data = []byte(s)
 	case "vtt":
 		var s string
-		s, err = resp.ToVTT()
+		s, err = resp.ToVTT(captionUnit)
 		data = []byte(s)
 	default:
 		err = fmt.Errorf("unsupported timestamps format %q", format)
@@ -458,6 +475,8 @@ func init() {
 	viper.BindPFlag("timestamp_out", f.Lookup("timestamp-out"))
 	f.String("timestamp-format", "", "Timestamp output format (json, srt, vtt; inferred from --timestamp-out when omitted)")
 	viper.BindPFlag("timestamp_format", f.Lookup("timestamp-format"))
+	f.String("caption-unit", "sentence", "SRT/VTT cue unit (sentence, word, char; separate from alignment granularity)")
+	viper.BindPFlag("caption_unit", f.Lookup("caption-unit"))
 	f.String("timestamp-granularity", "", "Timestamp alignment granularity (word, char, both)")
 	viper.BindPFlag("timestamp_granularity", f.Lookup("timestamp-granularity"))
 }

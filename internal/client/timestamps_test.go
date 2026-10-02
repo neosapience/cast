@@ -142,7 +142,7 @@ func TestToSRT(t *testing.T) {
 			{Text: "World.", Start: 0.5, End: 1.0},
 		},
 	}
-	got, err := resp.ToSRT()
+	got, err := resp.ToSRT("sentence")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -159,7 +159,7 @@ func TestToVTT(t *testing.T) {
 			{Text: "World.", Start: 0.5, End: 1.0},
 		},
 	}
-	got, err := resp.ToVTT()
+	got, err := resp.ToVTT("sentence")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
