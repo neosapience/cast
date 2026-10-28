@@ -2,6 +2,14 @@
 
 [Typecast](https://typecast.ai?utm_source=cast&utm_medium=github) Text-to-Speech CLI
 
+## SSFM 3.1 model selection
+
+Set the TTS model to `ssfm-v31` explicitly and choose a compatible voice using
+`GET /v3/voices?model=ssfm-v31`. Check the selected voice's `models` and supported
+emotions. Existing defaults are unchanged; do not infer language or cloning
+support from another model.
+
+
 ## Installation
 
 ```bash

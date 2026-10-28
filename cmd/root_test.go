@@ -704,7 +704,7 @@ func TestRootCmd_EmotionValidation(t *testing.T) {
 		{
 			name:   "smart requires ssfm-v30",
 			args:   []string{"hello", "--emotion", "smart", "--model", "ssfm-v21"},
-			errMsg: "emotion 'smart' is only supported with ssfm-v30",
+			errMsg: "emotion 'smart' is only supported with ssfm-v30 or ssfm-v31",
 		},
 		{
 			name:   "prev-text without smart emotion",

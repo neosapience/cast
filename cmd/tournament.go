@@ -307,7 +307,7 @@ func tournamentStageName(poolSize int) string {
 func init() {
 	tournamentCmd.Flags().String("text", "", "Custom text for voice preview")
 	tournamentCmd.Flags().Int("size", 8, "Tournament size (rounded down to power of 2)")
-	tournamentCmd.Flags().String("model", "", "Filter by model (ssfm-v30, ssfm-v21)")
+	tournamentCmd.Flags().String("model", "", "Filter by model (ssfm-v31, ssfm-v30, ssfm-v21)")
 	tournamentCmd.Flags().String("gender", "", "Filter by gender (male, female)")
 	tournamentCmd.Flags().String("age", "", "Filter by age (child, teenager, young_adult, middle_age, elder)")
 	tournamentCmd.Flags().String("use-case", "", "Filter by use case")

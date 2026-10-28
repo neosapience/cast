@@ -244,7 +244,6 @@ func buildPresets(v client.Voice) []preset {
 	return presets
 }
 
-
 func voiceMatchesQuery(v client.Voice, query string) bool {
 	for _, field := range []string{
 		v.VoiceID,
@@ -347,7 +346,7 @@ func (m pickModel) View() string {
 		}
 		b.WriteString("\n")
 		help := "  [P] Preview  [S] Set default  [C] Copy ID  [Enter] Confirm  [Esc] Back"
-		if len(m.presets) > 0 && m.presets[m.presetIdx].model == "ssfm-v30" {
+		if len(m.presets) > 0 && (m.presets[m.presetIdx].model == "ssfm-v30" || m.presets[m.presetIdx].model == "ssfm-v31") {
 			help = "  [P] Preview  [E] Smart  [S] Set default  [C] Copy ID  [Enter] Confirm  [Esc] Back"
 		}
 		b.WriteString(helpStyle.Render(help))
@@ -399,13 +398,13 @@ func (m pickModel) previewSmart() tea.Cmd {
 			return statusMsg("no voice to preview")
 		}
 		v := m.filtered[m.cursor]
-		if len(m.presets) == 0 || m.presets[m.presetIdx].model != "ssfm-v30" {
+		if len(m.presets) == 0 || (m.presets[m.presetIdx].model != "ssfm-v30" && m.presets[m.presetIdx].model != "ssfm-v31") {
 			return nil
 		}
 		req := client.TTSRequest{
 			VoiceID: v.VoiceID,
 			Text:    m.previewText,
-			Model:   "ssfm-v30",
+			Model:   m.presets[m.presetIdx].model,
 			Prompt: &client.TTSPrompt{
 				EmotionType: "smart",
 			},
@@ -454,7 +453,7 @@ func (m pickModel) copyID() tea.Cmd {
 
 func init() {
 	pickCmd.Flags().String("text", "", "Custom text for voice preview (default: English sample sentence)")
-	pickCmd.Flags().String("model", "", "Filter by model (ssfm-v30, ssfm-v21)")
+	pickCmd.Flags().String("model", "", "Filter by model (ssfm-v31, ssfm-v30, ssfm-v21)")
 	pickCmd.Flags().String("gender", "", "Filter by gender (male, female)")
 	pickCmd.Flags().String("age", "", "Filter by age (child, teenager, young_adult, middle_age, elder)")
 	pickCmd.Flags().String("use-case", "", "Filter by use case")

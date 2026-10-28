@@ -322,8 +322,8 @@ func buildTTSRequest(cmd *cobra.Command, text string) (client.TTSRequest, error)
 	if emotion != "" && emotion != "smart" && emotion != "preset" {
 		return client.TTSRequest{}, fmt.Errorf("unknown emotion type %q, use 'smart' or 'preset'", emotion)
 	}
-	if emotion == "smart" && model != "ssfm-v30" {
-		return client.TTSRequest{}, fmt.Errorf("emotion 'smart' is only supported with ssfm-v30")
+	if emotion == "smart" && model != "ssfm-v30" && model != "ssfm-v31" {
+		return client.TTSRequest{}, fmt.Errorf("emotion 'smart' is only supported with ssfm-v30 or ssfm-v31")
 	}
 	if (prevText != "" || nextText != "") && emotion != "smart" {
 		return client.TTSRequest{}, fmt.Errorf("--prev-text and --next-text require --emotion smart")
@@ -442,12 +442,12 @@ func init() {
 	f := rootCmd.Flags()
 	f.String("voice-id", "", "Voice ID (or TYPECAST_VOICE_ID)")
 	viper.BindPFlag("voice_id", f.Lookup("voice-id"))
-	f.String("model", defaultModel, "Model (ssfm-v30, ssfm-v21)")
+	f.String("model", defaultModel, "Model (ssfm-v31, ssfm-v30, ssfm-v21)")
 	viper.BindPFlag("model", f.Lookup("model"))
 	f.String("language", "", "Language code (ISO 639-3, auto-detected if omitted)")
 	viper.BindPFlag("language", f.Lookup("language"))
 	f.String("out", "", "Save to file instead of playing")
-	f.String("emotion", "", "Emotion type: smart (ssfm-v30 only), preset")
+	f.String("emotion", "", "Emotion type: smart (ssfm-v30/ssfm-v31), preset")
 	viper.BindPFlag("emotion", f.Lookup("emotion"))
 	f.String("emotion-preset", "", "Emotion preset (normal, happy, sad, angry, whisper, toneup, tonedown — see voices for availability)")
 	viper.BindPFlag("emotion_preset", f.Lookup("emotion-preset"))
