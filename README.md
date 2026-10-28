@@ -145,7 +145,7 @@ cast voices pick --text "Custom preview sentence"
 
 In the picker, type to filter, press Enter to select a voice, then:
 - **P** — Preview with current model/emotion preset (cycle with ←/→)
-- **E** — Preview with smart emotion (ssfm-v30 presets only)
+- **E**: Preview with smart emotion (ssfm-v30/ssfm-v31 presets)
 - **S** — Set as default voice
 - **C** — Copy voice ID to clipboard
 - **Enter** — Confirm and print voice ID to stdout
