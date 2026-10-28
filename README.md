@@ -2,14 +2,6 @@
 
 [Typecast](https://typecast.ai?utm_source=cast&utm_medium=github) Text-to-Speech CLI
 
-## SSFM 3.1 model selection
-
-Set the TTS model to `ssfm-v31` explicitly and choose a compatible voice using
-`GET /v3/voices?model=ssfm-v31`. Check the selected voice's `models` and supported
-emotions. Existing defaults are unchanged; do not infer language or cloning
-support from another model.
-
-
 ## Installation
 
 ```bash
@@ -75,9 +67,9 @@ cast "Hello, world!" --out hello.mp3 --format mp3
 | Flag | Description | Default |
 |------|-------------|---------|
 | `--voice-id` | Voice ID (run `cast voices get tc_60e5426de8b95f1d3000d7b5` to inspect the default) | `tc_60e5426de8b95f1d3000d7b5` |
-| `--model` | Model (`ssfm-v30`, `ssfm-v21`) | `ssfm-v30` |
+| `--model` | Model (`ssfm-v31`, `ssfm-v30`, `ssfm-v21`) | `ssfm-v30` |
 | `--language` | Language code (ISO 639-3) | auto-detected |
-| `--emotion` | Emotion type: `smart` (ssfm-v30 only), `preset` | |
+| `--emotion` | Emotion type: `smart` (ssfm-v30/ssfm-v31), `preset` | |
 | `--emotion-preset` | Preset emotion (`normal`, `happy`, `sad`, `angry`, `whisper`, `toneup`, `tonedown`) — requires `--emotion preset` | |
 | `--emotion-intensity` | Emotion intensity (0.0–2.0) — requires `--emotion preset` | 1.0 |
 | `--prev-text` | Previous sentence for context (`--emotion smart` only) | |
@@ -92,8 +84,12 @@ cast "Hello, world!" --out hello.mp3 --format mp3
 
 ### Models
 
+Use `--model` to select a model; the default remains `ssfm-v30`. Find compatible
+voices with `cast voices list --model ssfm-v31` and check their supported emotions.
+
 | Model | Languages | Emotions | Latency |
 |-------|-----------|----------|---------|
+| `ssfm-v31` | Check voice support | Preset + smart emotion; check voice support | Not specified |
 | `ssfm-v30` | 37 | 7 presets + smart emotion | Standard |
 | `ssfm-v21` | 27 | 4 presets (normal, happy, sad, angry) | Low |
 
@@ -106,7 +102,7 @@ cast "Hello, world!" --model ssfm-v21
 
 There are two emotion systems, selected with `--emotion`.
 
-#### Smart emotion (`--emotion smart`) — ssfm-v30 only
+#### Smart emotion (`--emotion smart`, ssfm-v30/ssfm-v31)
 
 AI infers the appropriate emotion from the text. Optionally provide surrounding sentences for better context.
 
@@ -124,6 +120,7 @@ Choose a specific emotion. Use `--emotion-preset` to pick one, and `--emotion-in
 
 | Model | Available presets |
 |-------|-------------------|
+| `ssfm-v31` | Check the selected voice's supported emotions |
 | `ssfm-v30` | `normal`, `happy`, `sad`, `angry`, `whisper`, `toneup`, `tonedown` |
 | `ssfm-v21` | `normal`, `happy`, `sad`, `angry` |
 
