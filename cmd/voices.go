@@ -181,7 +181,7 @@ var voicesRecommendCmd = &cobra.Command{
 }
 
 func init() {
-	voicesListCmd.Flags().String("model", "", "Filter by model (ssfm-v30, ssfm-v21)")
+	voicesListCmd.Flags().String("model", "", "Filter by model (ssfm-v31, ssfm-v30, ssfm-v21)")
 	voicesListCmd.Flags().String("gender", "", "Filter by gender (male, female)")
 	voicesListCmd.Flags().String("age", "", "Filter by age (child, teenager, young_adult, middle_age, elder)")
 	voicesListCmd.Flags().String("use-case", "", "Filter by use case (Announcer, Anime, Audiobook, Conversational, Documentary, E-learning, Rapper, Game, Tiktok/Reels, News, Podcast, Voicemail, Ads)")

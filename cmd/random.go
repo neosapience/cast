@@ -57,7 +57,7 @@ var randomCmd = &cobra.Command{
 }
 
 func init() {
-	randomCmd.Flags().String("model", "", "Filter by model (ssfm-v30, ssfm-v21)")
+	randomCmd.Flags().String("model", "", "Filter by model (ssfm-v31, ssfm-v30, ssfm-v21)")
 	randomCmd.Flags().String("gender", "", "Filter by gender (male, female)")
 	randomCmd.Flags().String("age", "", "Filter by age (child, teenager, young_adult, middle_age, elder)")
 	randomCmd.Flags().String("use-case", "", "Filter by use case")
