@@ -36,12 +36,35 @@ func TestDo_SendsAPIKeyHeader(t *testing.T) {
 	}
 }
 
+func TestDo_ChatGPTPluginAttributionOnGetAndPost(t *testing.T) {
+	t.Setenv("TYPECAST_INTEGRATION_SOURCE", "chatgpt-plugin")
+	t.Setenv("TYPECAST_GENERATED_BY", "chatgpt_plugin")
+	var methods []string
+	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		methods = append(methods, r.Method)
+		ua := r.Header.Get("User-Agent")
+		if !strings.HasPrefix(ua, "typecast-cli/") || !strings.HasSuffix(ua, " typecast-integration/1 (source=chatgpt-plugin; generated_by=chatgpt_plugin)") || strings.Contains(ua, "test-api-key") {
+			t.Errorf("unexpected User-Agent: %q", ua)
+		}
+		w.Write([]byte(`{}`))
+	})
+	if _, err := c.get("/test"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.post("/test", map[string]string{"text": "fixture"}); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(methods, ",") != "GET,POST" {
+		t.Fatalf("unexpected methods: %v", methods)
+	}
+}
+
 func TestAttributionSuffix_ValidatesBoundary(t *testing.T) {
 	generatedBy := strings.Repeat("a", 32)
 	if got := attributionSuffix("skill", generatedBy); !strings.Contains(got, generatedBy) {
 		t.Fatalf("expected 32-character generated_by token, got %q", got)
 	}
-	for _, source := range []string{"api-page", "api-docs"} {
+	for _, source := range []string{"api-page", "api-docs", "chatgpt-plugin"} {
 		if got := attributionSuffix(source, "codex"); !strings.Contains(got, "source="+source) {
 			t.Fatalf("expected %s attribution, got %q", source, got)
 		}
